@@ -26,24 +26,25 @@ export function drawSkyPlot(canvas, horizon, scan, now) {
   const y = (el) => pad.t + ((top - el) / (top - bottom)) * ph;
   const x = (az) => pad.l + (((((az + 180) % 360) + 360) % 360) / 360) * pw;
 
-  ctx.fillStyle = '#ffffff';
+  const dk = document.documentElement.dataset.theme === 'dark';
+  ctx.fillStyle = dk ? '#12161f' : '#ffffff';
   ctx.fillRect(pad.l, pad.t, pw, ph);
 
   ctx.font = '10px "IBM Plex Mono", monospace';
-  ctx.fillStyle = '#64748b';
+  ctx.fillStyle = dk ? '#8e93a0' : '#64748b';
   const span = top - bottom;
   const stepEl = span > 50 ? 15 : span > 20 ? 5 : 2;
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (let e = Math.ceil(bottom / stepEl) * stepEl; e <= top; e += stepEl) {
     ctx.beginPath(); ctx.moveTo(pad.l, y(e)); ctx.lineTo(pad.l + pw, y(e));
-    ctx.strokeStyle = e === 0 ? '#94a3b8' : '#e2e8f0'; ctx.stroke();
+    ctx.strokeStyle = e === 0 ? '#94a3b8' : (dk ? '#262d3d' : '#e2e8f0'); ctx.stroke();
     ctx.fillText(`${e}°`, pad.l - 4, y(e));
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (const [az, name] of [[180,'S'],[225,'SW'],[270,'W'],[315,'NW'],[0,'N'],[45,'NE'],[90,'E'],[135,'SE']]) {
     const xx = x(az);
     ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, pad.t + ph);
-    ctx.strokeStyle = '#f1f5f9'; ctx.stroke();
+    ctx.strokeStyle = dk ? '#1b2130' : '#f1f5f9'; ctx.stroke();
     ctx.fillText(name, xx, pad.t + ph + 3);
   }
 
@@ -68,7 +69,7 @@ export function drawSkyPlot(canvas, horizon, scan, now) {
       ctx.fillStyle = color; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.font = '600 11px "Inter", sans-serif';
-      ctx.fillStyle = '#0f172a'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillStyle = dk ? '#f5f5f7' : '#0f172a'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
       ctx.fillText(label, Math.min(pad.l + pw - 32, bx + 6), by - 3);
     };
     drawBody(now.sun.az, now.sun.el, '#d97706', 'Sun');
