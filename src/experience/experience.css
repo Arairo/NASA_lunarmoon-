@@ -191,7 +191,8 @@ body { background: var(--xp-bg); color: var(--xp-ink); -webkit-font-smoothing: a
    2. Mode switch + theme toggle (inside the app header)
    ========================================================================== */
 .xp-headtools { display: inline-flex; align-items: center; gap: 6px; }
-.xp-chip {
+.xp-chip { text-decoration: none;
+
   display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px;
   border-radius: 999px; border: 1px solid var(--xp-line-strong); background: var(--xp-surface-2);
   color: var(--xp-ink); font: 600 12px var(--xp-font); cursor: pointer;

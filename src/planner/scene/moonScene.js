@@ -177,10 +177,15 @@ export async function createMoonScene(container, { terrain, onPick, onStatus }) 
       backgroundColor: Cesium.Color.fromCssColorString('rgba(21,25,30,0.8)'),
     },
   });
-  earthTexture().then((canvas) => {
-    earthEntity.ellipsoid.material = new Cesium.ImageMaterialProperty({ image: canvas });
-    scene.requestRender();
-  });
+  // NASA Blue Marble (public domain, bundled: no key, no usage limits). Fall
+  // back to Cesium's built-in Natural Earth II tiles if it cannot load.
+  Cesium.Resource.fetchImage({ url: `${DATA}/earth_blue_marble_4k.jpg` })
+    .then((img) => img)
+    .catch(() => earthTexture())
+    .then((image) => {
+      earthEntity.ellipsoid.material = new Cesium.ImageMaterialProperty({ image });
+      scene.requestRender();
+    });
   const sunEntity = viewer.entities.add({
     name: 'Sun',
     position: new Cesium.Cartesian3(SUN_SPRITE_DISTANCE_M, 0, 0),
@@ -476,8 +481,50 @@ export async function createMoonScene(container, { terrain, onPick, onStatus }) 
     scene.requestRender();
   }
 
+  // --- Best landing spots: coloured markers with dashed lines to Earth ----------
+  let bestEntities = [];
+  function setHighlights(list) {
+    bestEntities.forEach((e) => viewer.entities.remove(e));
+    bestEntities = [];
+    for (const item of list) {
+      const pos = Cesium.Cartesian3.fromDegrees(item.lon, item.lat, (item.height ?? 0) + 30, MOON);
+      const color = Cesium.Color.fromCssColorString(item.color);
+      bestEntities.push(viewer.entities.add({
+        name: item.title,
+        position: pos,
+        point: { pixelSize: 15, color, outlineColor: Cesium.Color.WHITE, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+        label: {
+          text: `${item.title}\n${item.sub}`,
+          font: '600 12px "IBM Plex Sans", system-ui, sans-serif',
+          fillColor: Cesium.Color.WHITE,
+          showBackground: true,
+          backgroundColor: color.withAlpha(0.85),
+          pixelOffset: new Cesium.Cartesian2(14, -26),
+          horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 2.5e6),
+        },
+        polyline: {
+          positions: new Cesium.CallbackProperty(() => [pos, earthEntity.position.getValue(viewer.clock.currentTime) ?? pos], false),
+          width: 2.5,
+          arcType: Cesium.ArcType.NONE,
+          material: new Cesium.PolylineDashMaterialProperty({ color, dashLength: 18 }),
+        },
+      }));
+    }
+    scene.requestRender();
+  }
+
+  /** Stretch terrain heights so polar ridges and craters read clearly (1 = true scale). */
+  function setTerrainExaggeration(f) {
+    scene.verticalExaggeration = f;
+    scene.requestRender();
+  }
+
   return {
     viewer,
+    setTerrainExaggeration,
+    setHighlights,
     setState,
     setSites,
     setSelected,

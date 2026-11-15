@@ -44,6 +44,7 @@ export function initExperience(api) {
     tools.className = 'xp-headtools';
     tools.innerHTML = `
       <button type="button" class="xp-chip" data-x="beginner" title="Switch to the guided Beginner walk">Beginner</button>
+      <a class="xp-chip" href="./planner.html" title="CesiumJS planner with LOLA 3D terrain, video tutorial and full-precision tools">3D terrain (Cesium)</a>
       <button type="button" class="xp-chip xp-icon-btn" data-x="theme" data-theme-label aria-label="Switch light or dark mode" title="Light / dark"></button>`;
     headerRight.prepend(tools);
     tools.querySelector('[data-x="beginner"]').addEventListener('click', () => setMode('beginner'));

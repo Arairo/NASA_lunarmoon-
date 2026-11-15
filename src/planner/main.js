@@ -21,6 +21,7 @@ import { compass, escapeHtml, fmtLatLon, fromLocalInputValue, toLocalInputValue 
 import { createTour } from './ui/tour.js';
 import { createVideoTutorial } from './ui/videoTutorial.js';
 import { createWelcome } from './ui/welcome.js';
+import { findBestSpots } from '../experience/bestSpots.js';
 
 const DATA = `${import.meta.env.BASE_URL}data`;
 const $ = (sel) => document.querySelector(sel);
@@ -160,7 +161,34 @@ function selectSite(site, { fly = false, keepScenario = false } = {}) {
   history.replaceState(null, '', scenarioLink());
 }
 
+// Best overall and best flown landing spots for the current 30-day window,
+// shown on the 3D Moon with dashed lines to Earth.
+let bestKey = '', bestCancel = null, bestTimer = 0;
+function refreshBestSpots() {
+  if (!app.scene?.setHighlights) return;
+  const key = `${app.windowStartMs}|${JSON.stringify(app.config)}`;
+  if (key === bestKey) return;
+  bestKey = key;
+  bestCancel?.();
+  clearTimeout(bestTimer);
+  bestTimer = setTimeout(() => {
+    bestCancel = findBestSpots({
+      sites: app.sites.filter((s) => !String(s.id).startsWith('custom')),
+      startMs: app.windowStartMs,
+      config: app.config,
+      onDone: ({ flown, overall }) => {
+        const pct = (f) => `${Math.round(f * 100)}% power + Earth`;
+        const list = [];
+        if (overall) list.push({ lat: overall.site.lat, lon: overall.site.lon, color: '#1fa855', title: 'Best overall', sub: `${overall.site.short ?? overall.site.name} · ${pct(overall.ops)}` });
+        if (flown && flown.site.id !== overall?.site.id) list.push({ lat: flown.site.lat, lon: flown.site.lon, color: '#9b4dca', title: 'Best flown site', sub: `${flown.site.short ?? flown.site.name} · ${pct(flown.ops)}` });
+        app.scene.setHighlights(list);
+      },
+    });
+  }, 600);
+}
+
 function recomputeWindow() {
+  refreshBestSpots();
   app.scan = computeScan(app.ctx, app.windowStartMs, app.windowDays);
   app.eventsKey = null;
   renderWindow($('#assessment'), { scan: app.scan, config: app.config });
@@ -612,6 +640,16 @@ function wire() {
   );
   $('#overlayScale .scale-bar').style.background = RAMP_CSS;
   $('#viewSystem').addEventListener('click', () => app.scene?.earthMoonView());
+  {
+    const steps = [1, 3, 6];
+    let k = 0;
+    $('#reliefBtn')?.addEventListener('click', (e) => {
+      k = (k + 1) % steps.length;
+      app.scene?.setTerrainExaggeration(steps[k]);
+      e.currentTarget.textContent = `Relief ×${steps[k]}`;
+      e.currentTarget.setAttribute('aria-pressed', String(steps[k] > 1));
+    });
+  }
   $('#viewOverview').addEventListener('click', () => app.scene?.overview());
   $('#viewPole').addEventListener('click', () => app.scene?.southPole());
   $('#viewSite').addEventListener('click', () => app.scene?.flyToSite(app.site));
@@ -723,6 +761,7 @@ async function boot() {
     app.scene = await createMoonScene($('#cesium'), { terrain: app.terrain, onPick: pickHandler, onStatus: setStatus });
     app.scene.setSites(app.sites);
     app.scene.setSelected(app.site);
+    refreshBestSpots();
     app.scene.overview();
     setTimeout(() => app.scene.flyToSite(app.site), 2300);
     updateNow(true);
