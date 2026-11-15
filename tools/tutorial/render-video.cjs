@@ -21,7 +21,7 @@ const W = 1920;
 const H = 1080;
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(120000);
   await page.goto(`${BASE}?tutorial-render`);
