@@ -8,6 +8,11 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
   let dragging = null;
   // Pan offset in the camera's screen plane (Creo: Shift + middle-drag).
   let panX = 0, panY = 0, targetPanX = 0, targetPanY = 0;
+  // Orbit centre (normally the Moon's centre; moves toward Earth in the Earth-Moon view).
+  const center = [0, 0, 0], targetCenter = [0, 0, 0];
+  // Earth is drawn NOT to scale: 7 Moon radii away (really ~221) and 0.45 Moon radii (really 3.7).
+  const EARTH_DIST = 7, EARTH_R = 0.45;
+  let highlights = [];
   const onHint = options.onHint || (() => {});
   let sunDir = [1, 0.1, 0];
   let earthDir = [0.6, 0.7, -0.1];
@@ -94,7 +99,22 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       const sunLine = makeRay(0xfbbf24);
       const earthLine = makeRay(0x38bdf8);
 
-      three = { T, renderer, scene, camera, ambient, dirLight, moonMesh, selMarker, sunLine, earthLine };
+      // Earth: NASA Blue Marble, lit by the same Sun so its phase is right.
+      const earthMesh = new T.Mesh(
+        new T.SphereGeometry(EARTH_R, 96, 64),
+        new T.MeshStandardMaterial({ map: loadTex(options.earthUrl || `${import.meta.env.BASE_URL}data/earth_blue_marble_4k.jpg`), roughness: 0.75, metalness: 0 })
+      );
+      const earthGlow = new T.Mesh(
+        new T.SphereGeometry(EARTH_R * 1.08, 48, 32),
+        new T.MeshBasicMaterial({ color: 0x4aa8ff, transparent: true, opacity: 0.18, side: T.BackSide, blending: T.AdditiveBlending, depthWrite: false })
+      );
+      earthMesh.add(earthGlow);
+      earthMesh.rotation.z = (23.4 * Math.PI) / 180;
+      scene.add(earthMesh);
+      const hlGroup = new T.Group();
+      scene.add(hlGroup);
+
+      three = { T, renderer, scene, camera, ambient, dirLight, moonMesh, selMarker, sunLine, earthLine, earthMesh, hlGroup };
     }
   } catch (err) {
     console.warn('Three.js initialization fallback:', err);
@@ -106,6 +126,73 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     return [r * Math.cos(la) * Math.sin(lo), r * Math.sin(la), r * Math.cos(la) * Math.cos(lo)];
   };
 
+  // --- Highlighted spots with dotted lines to Earth -------------------------
+  const labelLayer = document.createElement('div');
+  labelLayer.className = 'xp-spot-labels';
+  canvas.parentElement?.appendChild(labelLayer);
+
+  function clearHighlights() {
+    if (!three) return;
+    for (const h of highlights) {
+      three.hlGroup.remove(h.obj);
+      h.obj.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+      h.label.remove();
+    }
+    highlights = [];
+  }
+
+  function updateHighlights(ePos) {
+    for (const h of highlights) {
+      const p = h.pos;
+      const toEarth = ePos.clone().sub(p);
+      const end = p.clone().add(toEarth.clone().setLength(toEarth.length() - EARTH_R * 1.05));
+      h.line.geometry.setFromPoints([p, end]);
+      h.line.computeLineDistances();
+      h.line.material.opacity = h.earthUp ? 0.95 : 0.3;
+      h.ring.scale.setScalar(clamp((distance - 1) / 2.1, 0.25, 1.4));
+      h.dot.scale.setScalar(clamp((distance - 1) / 2.1, 0.25, 1.4));
+    }
+  }
+
+  function placeLabels(cw, ch) {
+    if (!three) return;
+    const cam = three.camera.position;
+    for (const h of highlights) {
+      const facing = h.pos.clone().normalize().dot(cam.clone().sub(h.pos)) > 0;
+      const v = h.pos.clone().project(three.camera);
+      const on = facing && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
+      h.label.style.opacity = on ? '1' : '0';
+      h.label.style.transform = `translate(${((v.x + 1) / 2) * cw}px, ${((1 - v.y) / 2) * ch}px)`;
+    }
+  }
+
+  function setHighlights(list) {
+    if (!three) return;
+    clearHighlights();
+    const T = three.T;
+    for (const item of list) {
+      const pArr = latLonToVec3(item.lat, item.lon, 1.006);
+      const pos = new T.Vector3(...pArr);
+      const obj = new T.Group();
+      const color = new T.Color(item.color);
+      const dot = new T.Mesh(new T.SphereGeometry(0.016, 16, 16), new T.MeshBasicMaterial({ color }));
+      dot.position.copy(pos);
+      const ring = new T.Mesh(new T.RingGeometry(0.028, 0.036, 48), new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, opacity: 0.9 }));
+      ring.position.copy(pos);
+      ring.lookAt(pos.clone().multiplyScalar(2));
+      const line = new T.Line(new T.BufferGeometry().setFromPoints([pos, pos]), new T.LineDashedMaterial({ color, dashSize: 0.06, gapSize: 0.045, transparent: true, opacity: 0.95 }));
+      obj.add(dot, ring, line);
+      three.hlGroup.add(obj);
+      const label = document.createElement('div');
+      label.className = 'xp-spot-label';
+      label.style.setProperty('--c', item.color);
+      label.innerHTML = `<b>${item.title}</b><span>${item.sub || ''}</span>`;
+      labelLayer.appendChild(label);
+      highlights.push({ ...item, pos, obj, dot, ring, line, label, earthUp: item.earthUp });
+    }
+    renderGlobe();
+  }
+
   function renderGlobe() {
     const cw = canvas.clientWidth || 0;
     const ch = canvas.clientHeight || 0;
@@ -116,7 +203,9 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     distance += (targetDist - distance) * 0.25;
     panX += (targetPanX - panX) * 0.25;
     panY += (targetPanY - panY) * 0.25;
-    const settling = Math.abs(targetYaw - yaw) + Math.abs(targetPitch - pitch) + Math.abs(targetDist - distance) + Math.abs(targetPanX - panX) + Math.abs(targetPanY - panY) > 1e-4;
+    let dc = 0;
+    for (let k = 0; k < 3; k++) { center[k] += (targetCenter[k] - center[k]) * 0.2; dc += Math.abs(targetCenter[k] - center[k]); }
+    const settling = dc + Math.abs(targetYaw - yaw) + Math.abs(targetPitch - pitch) + Math.abs(targetDist - distance) + Math.abs(targetPanX - panX) + Math.abs(targetPanY - panY) > 1e-4;
 
     if (three) {
       three.renderer.setSize(cw, ch, false);
@@ -126,8 +215,8 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       const cx = distance * Math.cos(pitch) * Math.sin(yaw);
       const cy = distance * Math.sin(pitch);
       const cz = distance * Math.cos(pitch) * Math.cos(yaw);
-      three.camera.position.set(cx, cy, cz);
-      three.camera.lookAt(0, 0, 0);
+      three.camera.position.set(cx + center[0], cy + center[1], cz + center[2]);
+      three.camera.lookAt(center[0], center[1], center[2]);
       if (panX || panY) {
         three.camera.updateMatrixWorld();
         const right = new three.T.Vector3().setFromMatrixColumn(three.camera.matrixWorld, 0);
@@ -138,6 +227,9 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       three.ambient.intensity = realLighting ? 0.34 : 1.35;
       three.dirLight.intensity = realLighting ? 1.85 : 0.35;
       three.dirLight.position.set(sunDir[1] * 10, sunDir[2] * 10, sunDir[0] * 10);
+      const ePos = new three.T.Vector3(earthDir[1], earthDir[2], earthDir[0]).multiplyScalar(EARTH_DIST);
+      three.earthMesh.position.copy(ePos);
+      updateHighlights(ePos);
 
       if (selectedSite) {
         const p = latLonToVec3(selectedSite.lat, selectedSite.lon, 1.008);
@@ -149,6 +241,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
         three.earthLine.geometry.setFromPoints([new three.T.Vector3(...p), new three.T.Vector3(...eEnd)]);
       }
       three.renderer.render(three.scene, three.camera);
+      placeLabels(cw, ch);
       if (settling && !renderGlobe.queued) {
         renderGlobe.queued = true;
         requestAnimationFrame(() => { renderGlobe.queued = false; renderGlobe(); });
@@ -202,7 +295,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       targetPanX = clamp(dragging.panX - dx * k, -2, 2);
       targetPanY = clamp(dragging.panY + dy * k, -2, 2);
     } else {
-      targetDist = clamp(dragging.dist * Math.exp(dy * 0.006), 1.15, 6.5);
+      targetDist = clamp(dragging.dist * Math.exp(dy * 0.006), 1.15, 14);
     }
     renderGlobe();
   });
@@ -231,7 +324,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
   canvas.addEventListener('pointercancel', () => { dragging = null; canvas.style.cursor = ''; onHint(null); });
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    targetDist = clamp(targetDist * Math.exp(e.deltaY * 0.0012), 1.15, 6.5);
+    targetDist = clamp(targetDist * Math.exp(e.deltaY * 0.0012), 1.15, 14);
     renderGlobe();
   }, { passive: false });
 
@@ -258,6 +351,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     },
     flyToSite(site) {
       if (!site) return;
+      targetCenter.fill(0);
       targetPanX = 0; targetPanY = 0;
       selectedSite = site;
       targetYaw = site.lon * DEG;
@@ -266,32 +360,47 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       renderGlobe();
     },
     southPole() {
+      targetCenter.fill(0);
       targetPanX = 0; targetPanY = 0;
       targetYaw = 0; targetPitch = -1.48; targetDist = 2.05;
       renderGlobe();
     },
     overview() {
+      targetCenter.fill(0);
       targetPanX = 0; targetPanY = 0;
       targetYaw = 0.2; targetPitch = -0.35; targetDist = 3.2;
       renderGlobe();
     },
     earthMoon() {
       targetPanX = 0; targetPanY = 0;
-      targetYaw = 0.4; targetPitch = -0.2; targetDist = 4.8;
+      // Look at the midpoint, from a side view perpendicular to the Earth-Moon line.
+      const e = [earthDir[1], earthDir[2], earthDir[0]];
+      for (let k = 0; k < 3; k++) targetCenter[k] = e[k] * EARTH_DIST * 0.5;
+      let side = [-e[2], 0, e[0]];
+      const n = Math.hypot(...side) || 1;
+      side = side.map((v) => v / n);
+      targetPitch = 0.35; targetYaw = Math.atan2(side[0], side[2]); targetDist = 10.5;
+      renderGlobe();
+    },
+    setHighlights,
+    setHighlightEarth(states) {
+      highlights.forEach((h, i) => { h.earthUp = states[i]; });
       renderGlobe();
     },
     reset() {
+      targetCenter.fill(0);
       targetYaw = -0.45; targetPitch = -1.15; targetDist = 3.1; targetPanX = 0; targetPanY = 0;
       renderGlobe();
     },
     view(name) {
+      targetCenter.fill(0);
       targetPanX = 0; targetPanY = 0;
       const v = { front: [0, 0, 3], back: [Math.PI, 0, 3], left: [-Math.PI / 2, 0, 3], right: [Math.PI / 2, 0, 3], top: [0, 1.53, 3], bottom: [0, -1.53, 3] }[name];
       if (v) [targetYaw, targetPitch, targetDist] = v;
       renderGlobe();
     },
     zoomBy(f) {
-      targetDist = clamp(targetDist * f, 1.35, 6.5);
+      targetDist = clamp(targetDist * f, 1.15, 14);
       renderGlobe();
     },
   };

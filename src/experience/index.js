@@ -7,6 +7,8 @@ import { mountIntro } from './intro.js';
 import { mountNotch, notchBusy, notchUpdate } from './notch.js';
 import { createSpotlight } from './spotlight.js';
 import { createWalk } from './walk.js';
+import { findBestSpots } from './bestSpots.js';
+import { prepareSite, evaluate } from '../core/analysis.js';
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -149,6 +151,57 @@ export function initExperience(api) {
 
   applyTheme(document.documentElement.dataset.theme);
 
+  // ---------- Best landing spots (friend's idea #1) ----------
+  const best = { key: '', cancel: null, timer: 0, spots: [] };
+  const card = document.createElement('div');
+  card.className = 'xp-best';
+  card.innerHTML = '<div class="b-head"><span>Best spots · next 30 days</span><button type="button" class="b-x" aria-label="Hide best spots" title="Hide">–</button></div><div class="b-body"></div>';
+  document.getElementById('globeViewport')?.appendChild(card);
+  card.querySelector('.b-x').addEventListener('click', () => card.classList.toggle('is-min'));
+  const pctTxt = (f) => `${Math.round(f * 100)}%`;
+  function renderBest(state, progress = 0) {
+    const body = card.querySelector('.b-body');
+    if (state === 'busy') { body.innerHTML = `<div class="b-busy"><span class="w-spinner" style="width:14px;height:14px;border-width:2px"></span> Searching ${Math.round(progress * 100)}%</div>`; return; }
+    body.innerHTML = best.spots.map((sp, i) => `
+      <button type="button" class="b-row" data-i="${i}">
+        <i style="background:${sp.color}"></i>
+        <span class="b-txt"><b>${sp.title}</b><span>${sp.r.site.short && sp.r.site.searched ? 'LOLA search cell' : sp.r.site.name}</span></span>
+        <span class="b-num" title="Share of the window with the Sun up AND Earth in view">${pctTxt(sp.r.ops)}</span>
+      </button>`).join('') + `<p class="b-note">Ranked by time with both sunlight and Earth in view · ${best.count} candidates</p>`;
+    body.querySelectorAll('.b-row').forEach((b) => b.addEventListener('click', () => {
+      const sp = best.spots[Number(b.dataset.i)];
+      selectSite(sp.r.site, true);
+    }));
+  }
+  function refreshBest() {
+    const key = `${app.windowStartMs}|${JSON.stringify(app.config)}`;
+    if (key === best.key) return;
+    best.key = key;
+    clearTimeout(best.timer);
+    best.cancel?.();
+    renderBest('busy');
+    best.timer = setTimeout(() => {
+      best.cancel = findBestSpots({
+        sites, startMs: app.windowStartMs, config: app.config,
+        onProgress: (f) => renderBest('busy', f),
+        onDone: ({ flown, overall, count }) => {
+          best.count = count;
+          best.spots = [];
+          if (overall) best.spots.push({ r: overall, color: '#30d158', title: 'Best overall' });
+          if (flown && flown.site.id !== overall?.site.id) best.spots.push({ r: flown, color: '#bf5af2', title: 'Best flown site' });
+          best.spots.forEach((sp) => { sp.ctx = prepareSite(sp.r.site, null, app.config); });
+          getGlobe()?.setHighlights(best.spots.map((sp) => ({ lat: sp.r.site.lat, lon: sp.r.site.lon, color: sp.color, title: sp.title, sub: `${pctTxt(sp.r.ops)} power + Earth` })));
+          renderBest('done');
+          updateBestLinks();
+        },
+      });
+    }, 350);
+  }
+  function updateBestLinks() {
+    if (!best.spots.length) return;
+    getGlobe()?.setHighlightEarth(best.spots.map((sp) => evaluate(app.timeMs, sp.ctx, app.config, { withDsn: false }).earth.los));
+  }
+
   // ---------- Entry ----------
   window.addEventListener('hashchange', () => {
     const m = location.hash.replace('#', '');
@@ -164,7 +217,7 @@ export function initExperience(api) {
 
   return {
     busy: () => notchBusy(),
-    update: () => notchUpdate(app.lastNow, { playing: app.playing }),
+    update: () => { notchUpdate(app.lastNow, { playing: app.playing }); refreshBest(); updateBestLinks(); },
     proTour, controlsCoach, setMode,
   };
 }

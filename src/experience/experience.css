@@ -486,3 +486,33 @@ body.xp-enter header { animation: xpHeadIn 0.7s var(--xp-ease) both; }
 .xp-note summary::after { content: '›'; font-size: 16px; line-height: 1; transition: transform 0.3s var(--xp-spring); color: var(--xp-ink-3); }
 .xp-note[open] summary::after { transform: rotate(90deg); }
 .xp-note[open] p { animation: xpRise 0.35s var(--xp-ease); }
+
+/* ---------- Best spots card + globe labels ---------- */
+.xp-best {
+  position: absolute; right: 12px; bottom: 14px; z-index: 13; width: 270px;
+  border-radius: 18px; background: rgba(14, 18, 26, 0.78); color: #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+  font-family: var(--xp-font); overflow: hidden; animation: xpRise 0.6s var(--xp-ease);
+}
+.xp-best .b-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 6px 14px; font: 650 12px var(--xp-font); letter-spacing: 0.02em; color: #c7c9d1; }
+.xp-best .b-x { width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: #c7c9d1; cursor: pointer; }
+.xp-best.is-min .b-body { display: none; }
+.xp-best .b-body { padding: 0 6px 8px; }
+.xp-best .b-row { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 12px; background: transparent; color: inherit; text-align: left; cursor: pointer; transition: background-color 0.2s; }
+.xp-best .b-row:hover { background: rgba(255, 255, 255, 0.07); }
+.xp-best .b-row i { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 10px currentColor; }
+.xp-best .b-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.xp-best .b-txt b { font: 650 13px var(--xp-font); }
+.xp-best .b-txt span { font: 400 11.5px var(--xp-font); color: #a1a1a6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.xp-best .b-num { font: 700 17px var(--xp-font); font-variant-numeric: tabular-nums; }
+.xp-best .b-note { margin: 4px 8px 0; font: 400 10.5px/1.4 var(--xp-font); color: #8e93a0; }
+.xp-best .b-busy { display: flex; align-items: center; gap: 8px; padding: 6px 8px 4px; font: 500 12px var(--xp-font); color: #a1a1a6; }
+.xp-spot-labels { position: absolute; inset: 0; pointer-events: none; z-index: 11; overflow: hidden; }
+.xp-spot-label {
+  position: absolute; left: 0; top: 0; margin: -46px 0 0 12px; padding: 5px 9px; border-radius: 10px;
+  background: rgba(0, 0, 0, 0.62); border-left: 3px solid var(--c); color: #fff; white-space: nowrap;
+  font: 600 11.5px/1.25 var(--xp-font); display: flex; flex-direction: column; transition: opacity 0.25s;
+  backdrop-filter: blur(8px);
+}
+.xp-spot-label span { font-weight: 400; color: #c7c9d1; font-size: 10.5px; }
