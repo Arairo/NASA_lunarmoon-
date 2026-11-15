@@ -423,6 +423,7 @@ function boot() {
   });
 
   document.getElementById('datetimeInput')?.addEventListener('change', (e) => {
+    if (!e.target.value) return; // an empty field would parse as 1 January 2000
     const ms = Date.parse(e.target.value + ':00Z');
     if (Number.isFinite(ms)) setTime(ms, true);
   });
@@ -574,7 +575,7 @@ function boot() {
   });
 
   document.getElementById('cmpNearbyBtn')?.addEventListener('click', () => {
-    ['best-0', 'best-1', 'peak-shackleton'].forEach((id) => {
+    ['ridge', 'best-1', 'best-2', 'peak-shackleton'].filter((id) => id !== app.site.id).forEach((id) => {
       const s = app.sites.find((x) => x.id === id);
       if (s) addScenario(app, s, app.windowStartMs, `Alt: ${s.short || s.name}`);
     });
@@ -630,7 +631,11 @@ function boot() {
   document.getElementById('focusModeBtn')?.addEventListener('click', () => toggleFocusMode());
 
   window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    // Shortcuts belong to Professional mode only, and never steal keys from
+    // form fields, buttons, links, open dialogs or the spotlight tour.
+    if (document.body.dataset.mode !== 'pro') return;
+    if (e.target.closest?.('input, textarea, select, button, a, summary, [role="button"], [contenteditable="true"]')) return;
+    if (document.querySelector('#xp-spot.is-on, .xp-video, #settingsModal:not(.hidden), #glossaryModal:not(.hidden)')) return;
     if (e.code === 'Space') {
       e.preventDefault();
       document.getElementById('playPauseBtn')?.click();

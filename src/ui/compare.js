@@ -49,7 +49,7 @@ export function addScenario(app, site, startMs, label) {
 export function renderCompareTable(container, app, onOpenScenario) {
   if (!container) return;
   if (!app.scenarios.length) {
-    container.innerHTML = `<div class="text-center py-8 text-xs text-slate-500">No scenarios added yet. Click <strong>+ Add Current Site &amp; Date</strong>, <strong>Schedule Slip ×3</strong>, or <strong>Find Nearby Alternatives</strong> above to compare trade-offs!</div>`;
+    container.innerHTML = `<div class="text-center py-8 text-xs text-slate-500">No scenarios added yet. Click <strong>+ Add Current Site &amp; Date</strong>, <strong>Schedule Slip ×3</strong>, or <strong>Add best-lit alternatives</strong> above to compare trade-offs!</div>`;
     return;
   }
   container.innerHTML = `

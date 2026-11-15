@@ -571,3 +571,10 @@ body.xp-enter header { animation: xpHeadIn 0.7s var(--xp-ease) both; }
 
 /* The hidden attribute must win over Tailwind display utilities (e.g. .flex). */
 [hidden] { display: none !important; }
+
+/* Short laptop screens (e.g. 1280x720): keep the best-spots card clear of the view buttons. */
+@media (max-height: 820px) and (min-width: 721px) {
+  .xp-best { right: 66px; width: 250px; }
+  .xp-best .b-note { display: none; }
+}
+.xp-viewcube { z-index: 14; }

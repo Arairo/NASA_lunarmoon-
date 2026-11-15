@@ -161,6 +161,8 @@ export function initExperience(api) {
   });
 
   function setMode(mode, { tour = false } = {}) {
+    // Leaving Professional mode pauses its clock so it doesn't run unseen.
+    if (mode !== 'pro' && app.playing) document.getElementById('playPauseBtn')?.click();
     document.body.dataset.mode = mode;
     if (location.hash !== `#${mode}`) history.replaceState(null, '', `#${mode}`);
     if (mode === 'beginner') {
@@ -244,7 +246,10 @@ export function initExperience(api) {
   // ---------- Entry ----------
   window.addEventListener('hashchange', () => {
     const m = location.hash.slice(1).split('&')[0];
-    if ((m === 'pro' || m === 'beginner') && document.body.dataset.mode !== m) setMode(m);
+    if ((m === 'pro' || m === 'beginner') && document.body.dataset.mode !== m) {
+      document.getElementById('xp-intro')?.remove();
+      setMode(m);
+    }
   });
   const hashMode = location.hash.slice(1).split('&')[0];
   if (hashMode === 'pro' || hashMode === 'beginner') {

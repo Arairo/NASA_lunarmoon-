@@ -211,6 +211,7 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme, onTog
           scene.querySelector('#wDate').value = new Date(st.startMs).toISOString().slice(0, 16);
         }));
         scene.querySelector('#wDate').addEventListener('change', (e) => {
+          if (!e.target.value) return; // an empty field would parse as 1 January 2000
           const ms = Date.parse(e.target.value + ':00Z');
           if (Number.isFinite(ms)) { st.startMs = ms; scene.querySelectorAll('[data-ms]').forEach((c) => c.classList.remove('is-picked')); }
         });
