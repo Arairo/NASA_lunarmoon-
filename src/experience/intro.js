@@ -18,13 +18,11 @@ function ribbonsHtml(count = 34) {
 }
 
 export function mountIntro({ onChoose, siteCount = 29 }) {
-  const seen = (() => { try { return localStorage.getItem('lsp.introSeen') === '1'; } catch { return false; } })();
   const base = import.meta.env.BASE_URL;
   const el = document.createElement('div');
   el.id = 'xp-intro';
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-label', 'Welcome to Lunar Site Planner');
-  if (seen) el.classList.add('is-fast');
   el.innerHTML = `
     <div class="xp-ribbons">${ribbonsHtml()}</div>
     <button type="button" class="xp-skip">Skip intro</button>
@@ -96,6 +94,7 @@ export function mountIntro({ onChoose, siteCount = 29 }) {
   el.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && document.activeElement === start) split();
   });
-  setTimeout(() => start.focus({ preventScroll: true }), seen ? 300 : 2600);
+  // The full intro plays on every visit (Skip intro is always there).
+  setTimeout(() => start.focus({ preventScroll: true }), 2600);
   return el;
 }
