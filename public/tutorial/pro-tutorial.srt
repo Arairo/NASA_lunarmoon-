@@ -1,0 +1,87 @@
+1
+00:00:00,000 --> 00:00:01,626
+This is Lunar Site Planner.
+
+2
+00:00:01,626 --> 00:00:07,286
+It helps you choose where and when to land near the Moon's south pole, by checking two things:
+
+3
+00:00:07,286 --> 00:00:10,176
+sunlight for power, and Earth in view for radio.
+
+4
+00:00:10,876 --> 00:00:14,007
+Professional mode puts everything on one screen.
+
+5
+00:00:14,007 --> 00:00:16,160
+On the left, pick a landing site:
+
+6
+00:00:16,160 --> 00:00:21,052
+Apollo, commercial landers, or spots we found in NASA's laser terrain maps.
+
+7
+00:00:21,752 --> 00:00:23,763
+The 3D Moon uses NASA imagery.
+
+8
+00:00:23,763 --> 00:00:28,052
+Gold points to the Sun from your site, and blue points to Earth.
+
+9
+00:00:28,052 --> 00:00:32,141
+Spin it with the middle mouse button, just like CAD software.
+
+10
+00:00:32,841 --> 00:00:35,401
+This status pill gives the verdict right now:
+
+11
+00:00:35,401 --> 00:00:39,838
+how much power the solar panels make, and how high Earth sits above the hills.
+
+12
+00:00:40,538 --> 00:00:47,602
+We also search fifty-nine candidate sites for the best spot overall, and the best place a mission has already landed.
+
+13
+00:00:47,602 --> 00:00:50,138
+The dotted lines show their link to Earth.
+
+14
+00:00:50,838 --> 00:00:52,930
+Press play to travel through time.
+
+15
+00:00:52,930 --> 00:00:57,729
+At the south pole, the Sun skims the horizon and circles the sky once a month.
+
+16
+00:00:58,429 --> 00:01:00,892
+The timeline shows the next thirty days:
+
+17
+00:01:00,892 --> 00:01:05,448
+sunlight, power, Earth, the Deep Space Network, and the direct radio link.
+
+18
+00:01:06,148 --> 00:01:11,865
+On the right, the assessment counts down to sunset and Earthset, and draws the real terrain skyline.
+
+19
+00:01:12,565 --> 00:01:13,421
+Launches slip.
+
+20
+00:01:13,421 --> 00:01:18,432
+The compare tab tests the same site one, two and three months later, side by side.
+
+21
+00:01:19,132 --> 00:01:20,030
+New to all this?
+
+22
+00:01:20,030 --> 00:01:23,676
+Beginner mode walks you through it one step at a time, with Lumi.

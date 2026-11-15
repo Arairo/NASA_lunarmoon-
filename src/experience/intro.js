@@ -17,7 +17,7 @@ function ribbonsHtml(count = 34) {
   return html;
 }
 
-export function mountIntro({ onChoose, siteCount = 29 }) {
+export function mountIntro({ onChoose, onVideo, siteCount = 29 }) {
   const base = import.meta.env.BASE_URL;
   const el = document.createElement('div');
   el.id = 'xp-intro';
@@ -56,6 +56,7 @@ export function mountIntro({ onChoose, siteCount = 29 }) {
         </div>
       </div>
     </div>
+    <button type="button" class="xp-tourlink">▶ Watch the 85-second tour</button>
     <div class="xp-stats">
       <span class="xp-stat"><b>${siteCount}</b> landing sites</span>
       <span class="xp-stat"><b>NASA LOLA</b> terrain horizons</span>
@@ -79,6 +80,7 @@ export function mountIntro({ onChoose, siteCount = 29 }) {
   };
 
   start.addEventListener('click', split);
+  el.querySelector('.xp-tourlink').addEventListener('click', () => onVideo?.());
   el.querySelector('.xp-skip').addEventListener('click', () => {
     el.classList.add('is-fast');
     el.querySelector('.xp-skip').remove();

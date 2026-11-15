@@ -32,6 +32,27 @@ const GESTURES = `<div class="xp-gestures">
   <div class="xp-gesture"><div class="xp-mouse m-mid"><span class="w"></span></div><b>Zoom</b>Scroll wheel<br><span class="xp-key">Ctrl</span> + middle-drag</div>
 </div>`;
 
+/** Narrated tour of Professional mode (subtitles burned in), in a pop-up player. */
+export function openVideo() {
+  const base = import.meta.env.BASE_URL;
+  const box = document.createElement('div');
+  box.className = 'xp-video';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-label', 'Video tour of Professional mode');
+  box.innerHTML = `<div class="v-card">
+      <div class="v-head"><b>Professional mode in 85 seconds</b>
+        <span><a href="${base}tutorial/pro-tutorial.mp4" download class="xp-link">Download MP4</a>
+        <button type="button" class="xp-chip xp-icon-btn" data-v="close" aria-label="Close video">✕</button></span></div>
+      <video src="${base}tutorial/pro-tutorial.mp4" poster="${base}tutorial/pro-tutorial-poster.jpg" controls autoplay playsinline></video>
+    </div>`;
+  document.body.appendChild(box);
+  const close = () => { box.querySelector('video')?.pause(); box.remove(); removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  addEventListener('keydown', onKey);
+  box.addEventListener('click', (e) => { if (e.target === box || e.target.closest('[data-v="close"]')) close(); });
+  setTimeout(() => box.querySelector('[data-v="close"]')?.focus(), 50);
+}
+
 export function initExperience(api) {
   const { app, sites, selectSite, setTime, switchMode, getGlobe } = api;
   const notch = mountNotch();
@@ -43,11 +64,13 @@ export function initExperience(api) {
     const tools = document.createElement('div');
     tools.className = 'xp-headtools';
     tools.innerHTML = `
+      <button type="button" class="xp-chip" data-x="video" title="Watch the 85-second narrated tour of Professional mode">▶ Video</button>
       <button type="button" class="xp-chip" data-x="beginner" title="Switch to the guided Beginner walk">Beginner</button>
       <a class="xp-chip" href="./planner.html" title="CesiumJS planner with LOLA 3D terrain, video tutorial and full-precision tools">3D terrain (Cesium)</a>
       <button type="button" class="xp-chip xp-icon-btn" data-x="theme" data-theme-label aria-label="Switch light or dark mode" title="Light / dark"></button>`;
     headerRight.prepend(tools);
     tools.querySelector('[data-x="beginner"]').addEventListener('click', () => setMode('beginner'));
+    tools.querySelector('[data-x="video"]').addEventListener('click', () => openVideo());
     tools.querySelector('[data-x="theme"]').addEventListener('click', toggleTheme);
     applyTheme(document.documentElement.dataset.theme);
   }
@@ -216,7 +239,7 @@ export function initExperience(api) {
     setMode(hashMode);
   } else {
     document.body.dataset.mode = 'intro';
-    mountIntro({ siteCount: sites.length, onChoose: (m) => setMode(m) });
+    mountIntro({ siteCount: sites.length, onChoose: (m) => setMode(m), onVideo: openVideo });
   }
 
   return {
