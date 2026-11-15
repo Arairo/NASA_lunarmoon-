@@ -48,11 +48,35 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       }
 
       const texLoader = new T.TextureLoader();
-      const tex = texLoader.load(textureUrl, () => renderGlobe());
-      const moonGeo = new T.SphereGeometry(1, 64, 48);
+      const aniso = renderer.capabilities.getMaxAnisotropy?.() || 1;
+      const loadTex = (url) => {
+        const t = texLoader.load(url, () => renderGlobe());
+        t.anisotropy = aniso;
+        if ('colorSpace' in t) t.colorSpace = T.SRGBColorSpace;
+        return t;
+      };
+      // Start with the small image so the globe appears at once, then swap in
+      // the 4K LROC WAC mosaic when it has downloaded.
+      const tex = loadTex(textureUrl);
+      const moonGeo = new T.SphereGeometry(1, 128, 96);
       const moonMat = new T.MeshStandardMaterial({ map: tex, roughness: 0.92, metalness: 0.02 });
       const moonMesh = new T.Mesh(moonGeo, moonMat);
+      // Three.js puts texture longitude -180 at phi = 0; turn the sphere so
+      // longitude 0 faces +Z, matching latLonToVec3, the site markers and the
+      // Sun/Earth vectors.
+      moonMesh.rotation.y = -Math.PI / 2;
       scene.add(moonMesh);
+      texLoader.load(options.hiResUrl || `${import.meta.env.BASE_URL}data/moon_wac_global_4k.jpg`, (hi) => {
+        hi.anisotropy = aniso;
+        if ('colorSpace' in hi) hi.colorSpace = T.SRGBColorSpace;
+        moonMat.map = hi; moonMat.needsUpdate = true; renderGlobe();
+      });
+      // South-polar cap (75-90 S) from the 450 m polar WAC mosaic, so the pole
+      // stays sharp instead of smearing where the global image converges.
+      const capMat = new T.MeshStandardMaterial({ map: loadTex(`${import.meta.env.BASE_URL}data/sp_wac_geo.jpg`), roughness: 0.92, metalness: 0.02, polygonOffset: true, polygonOffsetFactor: -2 });
+      const cap = new T.Mesh(new T.SphereGeometry(1.0004, 256, 48, 0, Math.PI * 2, (165 * Math.PI) / 180, (15 * Math.PI) / 180), capMat);
+      cap.rotation.y = -Math.PI / 2;
+      scene.add(cap);
 
       const selMarker = new T.Mesh(
         new T.SphereGeometry(0.024, 16, 16),
@@ -118,6 +142,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       if (selectedSite) {
         const p = latLonToVec3(selectedSite.lat, selectedSite.lon, 1.008);
         three.selMarker.position.set(p[0], p[1], p[2]);
+        three.selMarker.scale.setScalar(clamp((distance - 1) / 2.1, 0.12, 1));
         const sEnd = [p[0] + sunDir[1] * 0.65, p[1] + sunDir[2] * 0.65, p[2] + sunDir[0] * 0.65];
         const eEnd = [p[0] + earthDir[1] * 0.65, p[1] + earthDir[2] * 0.65, p[2] + earthDir[0] * 0.65];
         three.sunLine.geometry.setFromPoints([new three.T.Vector3(...p), new three.T.Vector3(...sEnd)]);

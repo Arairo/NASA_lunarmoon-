@@ -481,3 +481,8 @@ body.xp-enter header { animation: xpHeadIn 0.7s var(--xp-ease) both; }
 #compareView > div { border-radius: 24px !important; box-shadow: var(--xp-shadow) !important; }
 #siteListContainer [data-pick-site] { transition: transform 0.35s var(--xp-spring), background-color 0.2s, border-color 0.2s; }
 #siteListContainer [data-pick-site]:hover { transform: translateX(3px); }
+.xp-note summary { list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.xp-note summary::-webkit-details-marker { display: none; }
+.xp-note summary::after { content: '›'; font-size: 16px; line-height: 1; transition: transform 0.3s var(--xp-spring); color: var(--xp-ink-3); }
+.xp-note[open] summary::after { transform: rotate(90deg); }
+.xp-note[open] p { animation: xpRise 0.35s var(--xp-ease); }

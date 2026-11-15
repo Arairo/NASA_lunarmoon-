@@ -72,7 +72,7 @@ export function renderAssessmentPanel(container, app, callbacks = {}) {
       <p class="text-[11px] opacity-90 pl-4">${esc(overallStatus.desc)}</p>
     </div>
 
-    ${app.site.note ? `<div class="p-2.5 rounded-xl bg-slate-50 border-l-4 border-slate-400 text-xs text-slate-700">${esc(app.site.note)}</div>` : ''}
+    ${app.site.note ? `<details ${app.noteOpen ? 'open' : ''} class="xp-note rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700"><summary class="px-2.5 py-2 cursor-pointer font-semibold text-slate-800">About this site</summary><p class="px-2.5 pb-2.5 leading-relaxed">${esc(app.site.note)}</p></details>` : ''}
 
     ${app.learnExplain ? `
       <div class="p-2.5 rounded-xl bg-blue-50 border-l-4 border-blue-600 text-xs text-slate-800 space-y-1">
@@ -228,6 +228,7 @@ export function renderAssessmentPanel(container, app, callbacks = {}) {
     if (skyCanvas) drawSkyPlot(skyCanvas, app.ctx.horizon, app.scan, now);
   }
 
+  container.querySelector('.xp-note')?.addEventListener('toggle', (e) => { app.noteOpen = e.currentTarget.open; });
   container.querySelector('#panelAddCompareBtn')?.addEventListener('click', () => {
     callbacks.onAddCompare?.();
   });

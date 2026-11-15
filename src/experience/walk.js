@@ -119,7 +119,7 @@ function describe(scan, i) {
 }
 
 export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
-  const st = { step: 0, site: null, startMs: DATES[0].ms, ctx: null, scan: null, v: null, idx: 0, playing: false, slips: null };
+  const st = { step: 0, site: null, startMs: DATES[0].ms, ctx: null, scan: null, v: null, idx: 0, playing: false, slips: null, other: null, otherRes: null };
   const root = document.createElement('section');
   root.id = 'xp-walk';
   root.setAttribute('aria-label', 'Beginner mode');
@@ -156,6 +156,8 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
       st.v = verdicts(st.scan);
       st.idx = 0;
       st.slips = null;
+      st.other = null;
+      st.otherRes = null;
       done();
     }, 30);
   }
@@ -335,6 +337,52 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
       ready: () => !!st.slips,
     },
     {
+      id: 'compare',
+      mood: () => (st.otherRes ? 'wow' : 'think'),
+      render: () => {
+        if (!st.other) st.other = sites.find((x) => x.id === (st.site.id === 'ridge' ? 'shackleton' : 'ridge'));
+        const choices = FEATURED.filter((f) => f.id !== st.site.id);
+        const picker = `<div class="w-row" style="margin-bottom:14px">${choices.map((f) => `<button type="button" class="w-pill ${st.other?.id === f.id ? 'is-picked' : ''}" data-other="${f.id}">${f.title}</button>`).join('')}
+          <select class="w-select" data-other-sel><option value="">Any other site…</option>${sites.filter((x) => x.id !== st.site.id).map((x) => `<option value="${esc(x.id)}" ${st.other?.id === x.id && !choices.some((c) => c.id === x.id) ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>`;
+        if (!st.otherRes) return `${say('Compare two places', 'Planners rarely look at one site alone. Pick a second place and I’ll check both on the same date.')}<div class="w-content">${picker}<div class="w-loading"><div class="w-spinner"></div>Checking ${esc(st.other.name)}</div></div>`;
+        const A = { site: st.site, scan: st.scan, v: st.v }, B = st.otherRes;
+        const rank = { green: 2, amber: 1, red: 0 };
+        const sA = A.scan.stats, sB = B.scan.stats;
+        const dSun = sA.litFraction - sB.litFraction, dEarth = sA.earthCentreFraction - sB.earthCentreFraction, dV = rank[A.v.overall] - rank[B.v.overall];
+        const tol = 0.02;
+        const aDom = dSun >= -tol && dEarth >= -tol && dV >= 0 && (dSun > tol || dEarth > tol || dV > 0);
+        const bDom = dSun <= tol && dEarth <= tol && dV <= 0 && (dSun < -tol || dEarth < -tol || dV < 0);
+        const win = aDom ? A : bDom ? B : null;
+        const nm = (r) => esc(r.site.short || r.site.name);
+        const pc = (f) => Math.round(f * 100) + '%';
+        const col = (r) => `<div class="w-panel" style="${win === r ? 'border-color:var(--xp-ok);box-shadow:0 0 0 3px rgba(48,209,88,.25)' : ''}">
+            <div style="display:flex;align-items:center;gap:12px"><div class="w-light ${r.v.overall}" style="width:52px;height:52px;font-size:20px">${LIGHT[r.v.overall][1]}</div>
+              <div><div style="font:650 17px var(--xp-font)">${esc(r.site.name)}</div><div class="w-note" style="margin:0">${LIGHT[r.v.overall][0]} at touchdown${win === r ? ' · better on both' : ''}</div></div></div>
+            <div class="w-facts" style="grid-template-columns:1fr 1fr">
+              <div class="w-fact"><div class="k">Sunlight</div><div class="v">${Math.round(r.scan.stats.litFraction * 100)}%</div></div>
+              <div class="w-fact"><div class="k">Earth in view</div><div class="v">${Math.round(r.scan.stats.earthCentreFraction * 100)}%</div></div>
+              <div class="w-fact"><div class="k">Longest dark</div><div class="v">${fmtHours(r.scan.stats.longestDarkH)}</div></div>
+              <div class="w-fact"><div class="k">Average power</div><div class="v">${r.scan.stats.avgPowerW.toFixed(0)} W</div></div>
+            </div></div>`;
+        let verdict;
+        if (win) verdict = `<b>${nm(win)}</b> is better on both counts for this date.`;
+        else if (Math.abs(dSun) <= tol && Math.abs(dEarth) <= tol) verdict = 'They come out about even for this date.';
+        else {
+          const sunW = dSun > 0 ? A : B, earthW = dEarth > 0 ? A : B;
+          verdict = `It’s a trade-off: <b>${nm(sunW)}</b> gets more sunlight (${pc(Math.max(sA.litFraction, sB.litFraction))} vs ${pc(Math.min(sA.litFraction, sB.litFraction))}), but <b>${nm(earthW)}</b> keeps Earth in view longer (${pc(Math.max(sA.earthCentreFraction, sB.earthCentreFraction))} vs ${pc(Math.min(sA.earthCentreFraction, sB.earthCentreFraction))}).`;
+        }
+        return `${say('Compare two places', `Same date, two places. ${verdict}`)}<div class="w-content">${picker}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">${col(A)}${col(B)}</div>
+          ${why('Why can two nearby places be so different?', 'At the pole the Sun is so low that a few hundred metres of height decides everything. A ridge top sees over the surrounding hills; a crater floor a few kilometres away sits in their shadow. The same goes for Earth, which hangs just above the horizon. That is why mission teams compare many candidate spots before choosing one.')}</div>`;
+      },
+      enter: () => { if (!st.otherRes) runOther(); },
+      bind: () => {
+        scene.querySelectorAll('[data-other]').forEach((b) => b.addEventListener('click', () => setOther(b.dataset.other)));
+        scene.querySelector('[data-other-sel]')?.addEventListener('change', (e) => e.target.value && setOther(e.target.value));
+      },
+      ready: () => !!st.otherRes,
+    },
+    {
       mood: 'happy',
       reaction: 'cheer',
       render: () => `${say('You did it!', 'You just did what mission planners do: picked a site, checked power and radio, and tested a delay.', 'Want to go deeper? Professional mode has the 3D Moon, the full timeline and side-by-side comparison. I’ll show you around.')}
@@ -350,6 +398,25 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
       next: () => { st.scan = null; go(0); },
     },
   ];
+
+  function runOther() {
+    const other = st.other || sites.find((x) => x.id === (st.site.id === 'ridge' ? 'shackleton' : 'ridge'));
+    st.other = other;
+    setTimeout(() => {
+      const ctx = prepareSite(other, null, app.config);
+      const scan = scanWindow(ctx, st.startMs, 30, app.config);
+      if (st.other !== other) return;
+      st.otherRes = { site: other, scan, v: verdicts(scan) };
+      if (st.step === COMPARE_STEP) render(COMPARE_STEP);
+    }, 40);
+  }
+  function setOther(id) {
+    const o = sites.find((x) => x.id === id);
+    if (!o || o === st.other) return;
+    st.other = o; st.otherRes = null;
+    render(COMPARE_STEP); runOther();
+  }
+  const COMPARE_STEP = STEPS.findIndex((x) => x.id === 'compare');
 
   function pick(id) {
     st.site = sites.find((s) => s.id === id) || null;
