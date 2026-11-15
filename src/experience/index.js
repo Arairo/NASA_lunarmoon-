@@ -156,11 +156,11 @@ export function initExperience(api) {
         selectSite(site, true);
         setTime(ms, true);
       }
-      setMode('pro', { tour: withTour });
+      setMode('pro', { tour: withTour !== false });
     },
   });
 
-  function setMode(mode, { tour = false } = {}) {
+  function setMode(mode, { tour = (mode === 'pro') } = {}) {
     // Leaving Professional mode pauses its clock so it doesn't run unseen.
     if (mode !== 'pro' && app.playing) document.getElementById('playPauseBtn')?.click();
     document.body.dataset.mode = mode;
@@ -249,15 +249,15 @@ export function initExperience(api) {
     const m = location.hash.slice(1).split('&')[0];
     if ((m === 'pro' || m === 'beginner') && document.body.dataset.mode !== m) {
       document.getElementById('xp-intro')?.remove();
-      setMode(m);
+      setMode(m, { tour: m === 'pro' });
     }
   });
   const hashMode = location.hash.slice(1).split('&')[0];
   if (hashMode === 'pro' || hashMode === 'beginner') {
-    setMode(hashMode);
+    setMode(hashMode, { tour: hashMode === 'pro' });
   } else {
     document.body.dataset.mode = 'intro';
-    mountIntro({ siteCount: sites.length, onChoose: (m) => setMode(m), onAbout: () => openAbout({ onVideo: openVideo }) });
+    mountIntro({ siteCount: sites.length, onChoose: (m) => setMode(m, { tour: m === 'pro' }), onAbout: () => openAbout({ onVideo: openVideo }) });
   }
 
   return {

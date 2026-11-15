@@ -158,7 +158,7 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme, onTog
   const scene = root.querySelector('.w-scene');
   const nextBtn = root.querySelector('[data-a="next"]');
   const backBtn = root.querySelector('[data-a="back"]');
-  root.querySelector('[data-a="pro"]').addEventListener('click', () => onOpenPro(st.site, st.startMs, false));
+  root.querySelector('[data-a="pro"]').addEventListener('click', () => onOpenPro(st.site, st.startMs, true));
   root.querySelector('[data-a="theme"]').addEventListener('click', onToggleTheme);
   root.querySelector('[data-a="sound"]').addEventListener('click', () => onToggleSound?.());
   backBtn.addEventListener('click', () => go(st.step - 1));
