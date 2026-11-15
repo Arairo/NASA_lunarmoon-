@@ -76,7 +76,7 @@ export function renderAssessmentPanel(container, app, callbacks = {}) {
 
     ${app.learnExplain ? `
       <div class="p-2.5 rounded-xl bg-blue-50 border-l-4 border-blue-600 text-xs text-slate-800 space-y-1">
-        <strong class="block text-blue-900">💡 Plain-English Explainer:</strong>
+        <strong class="block text-blue-900">Plain-English explainer</strong>
         <p>${Math.abs(app.site.lat) > 80
           ? `Near ${Math.abs(app.site.lat).toFixed(1)}°S, the Moon’s 1.54° tilt keeps the Sun skimming just above the horizon. A ridge crest stays lit for weeks, while crater floors right next door never see the Sun.`
           : app.site.lon > 100 || app.site.lon < -100
@@ -89,7 +89,7 @@ export function renderAssessmentPanel(container, app, callbacks = {}) {
     <div class="p-3 rounded-xl border border-slate-200 bg-white shadow-sm space-y-2">
       <div class="flex items-center justify-between cursor-pointer select-none" data-card-toggle="instant">
         <div class="flex items-center gap-1.5 font-bold text-xs text-slate-800">
-          <span>☀️ Solar &amp; 🌍 Earth Gauges</span>
+          <span class="inline-flex items-center gap-1.5"><svg class="xp-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg> Solar &amp; Earth</span>
         </div>
         <div class="flex items-center gap-2">
           ${!app.uiCards.instant ? `<span class="mono text-[11px] text-slate-600 font-medium">${now.sun.watts.toFixed(0)}W · ${deg(now.earth.clearance, 1)}</span>` : ''}
@@ -103,7 +103,7 @@ export function renderAssessmentPanel(container, app, callbacks = {}) {
         <div class="grid grid-cols-2 gap-2.5 pt-1">
           <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60 space-y-1">
             <div class="flex items-center justify-between text-[11px] font-semibold text-slate-600">
-              <span>☀️ Solar Power</span>
+              <span class="inline-flex items-center gap-1" style="color:#ffb300"><svg class="xp-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg></span><span>Solar Power</span>
               <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${now.powerStatus === 'go' ? 'bg-emerald-100 text-emerald-800' : now.powerStatus === 'marginal' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}">
                 ${now.powerStatus === 'go' ? 'Meets load' : now.powerStatus === 'marginal' ? 'Below load' : '0 W Dark'}
               </span>
@@ -121,7 +121,7 @@ export function renderAssessmentPanel(container, app, callbacks = {}) {
 
           <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60 space-y-1">
             <div class="flex items-center justify-between text-[11px] font-semibold text-slate-600">
-              <span>🌍 Earth Link</span>
+              <span class="inline-flex items-center gap-1" style="color:#38bdf8"><svg class="xp-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7 7c2 1 2 3 4 3s2 3 0 4-1 4 1 5M15 4c-1 2 1 3 3 3"/></svg></span><span>Earth Link</span>
               <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${now.commsStatus === 'go' ? 'bg-emerald-100 text-emerald-800' : now.commsStatus === 'marginal' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}">
                 ${now.commsStatus === 'go' ? 'Available' : now.commsStatus === 'marginal' ? 'Grazing' : 'Blocked'}
               </span>

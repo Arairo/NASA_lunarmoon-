@@ -1,9 +1,10 @@
-// Main application bootstrap: Mission Explorer, Duolingo-style Learning Map & Scenario Compare.
+// Main application bootstrap: Mission Explorer (Pro mode) and Scenario Compare.
 import './tailwind.css';
 import './styles.css';
 import sitesData from './data/sites.js';
 import { clamp, SITE_GROUPS, SITE_BADGES, SYNODIC_MONTH_DAYS } from './core/constants.js';
 import { prepareSite, scanWindow, evaluate } from './core/analysis.js';
+import { DEFAULT_COMMS_CONFIG } from './core/comms.js';
 import { esc, fmtLatLon, fmtUtc } from './ui/format.js';
 import { createGlobeRenderer } from './scene/globeRenderer.js';
 import { createPolarMapRenderer, ramp } from './ui/polarMap.js';
@@ -11,7 +12,6 @@ import { drawTimeline } from './ui/timeline.js';
 import { renderAssessmentPanel } from './ui/assessment.js';
 import { addScenario, renderCompareTable, exportCompareCsv } from './ui/compare.js';
 import { createTour, openGlossary, showToast } from './ui/modals.js';
-import { renderAcademy } from './academy/academyView.js';
 import { initExperience } from './experience/index.js';
 
 export const app = {
@@ -36,7 +36,9 @@ export const app = {
   config: {
     mastHeightM: 2.0,
     power: { mode: 'vertical_tracking', areaM2: 2.0, efficiency: 0.29, fixedAzDeg: 0, loadW: 120 },
-    comms: { preset: 's_mga', minClearanceDeg: 2.0, targetMarginDb: 3.0, dataRateBps: 256000 },
+    // Start from the engine defaults so the link budget has every term it needs
+    // (losses, required Eb/N0, DSN minimum elevation).
+    comms: { ...DEFAULT_COMMS_CONFIG, preset: 's_mga', minClearanceDeg: 2.0, targetMarginDb: 3.0, dataRateBps: 256000 },
   },
   ui: {
     siteCollapsed: false,
@@ -44,24 +46,7 @@ export const app = {
     timelineCollapsed: false,
     focusMode: false,
   },
-  academy: {
-    completed: [],
-    xp: 0,
-    streak: 1,
-    unlockAll: false,
-    activeNodeId: null,
-    quizOpt: null,
-    quizAnswered: false,
-    simIdx: 12,
-    simSiteId: 'ridge',
-  },
 };
-
-try {
-  const saved = JSON.parse(localStorage.getItem('lsp.academyProgress') || '{}');
-  if (Array.isArray(saved.completed)) app.academy.completed = saved.completed;
-  if (Number.isFinite(saved.xp)) app.academy.xp = saved.xp;
-} catch {}
 
 try {
   const savedUi = JSON.parse(localStorage.getItem('lsp.uiState') || '{}');
@@ -192,7 +177,6 @@ export function setTime(ms, reanchor = false) {
 export function switchMode(mode) {
   app.mode = mode;
   document.getElementById('explorerView')?.classList.toggle('hidden', mode !== 'explorer');
-  document.getElementById('academyView')?.classList.toggle('hidden', mode !== 'academy');
   document.getElementById('compareView')?.classList.toggle('hidden', mode !== 'compare');
 
   const setBtn = (id, active) => {
@@ -203,12 +187,9 @@ export function switchMode(mode) {
       : 'px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
   };
   setBtn('modeExplorerBtn', mode === 'explorer');
-  setBtn('modeAcademyBtn', mode === 'academy');
   setBtn('modeCompareBtn', mode === 'compare');
 
-  if (mode === 'academy') {
-    renderAcademy(document.getElementById('academyRoot'), app, handleAcademyJump);
-  } else if (mode === 'compare') {
+  if (mode === 'compare') {
     renderCompareTable(document.getElementById('compareTableContainer'), app, (sc) => {
       app.windowStartMs = sc.startMs;
       app.timeMs = sc.startMs;
@@ -222,24 +203,6 @@ export function switchMode(mode) {
       updateCurrentTime(false);
     });
   }
-}
-
-function handleAcademyJump({ node, mode }) {
-  if (mode) return switchMode(mode);
-  if (!node) return;
-  if (node.jumpSite) {
-    const s = app.sites.find((x) => x.id === node.jumpSite);
-    if (s) selectSite(s, true);
-  }
-  if (node.jumpCompare) {
-    if (!app.scenarios.length) {
-      addScenario(app, app.site, app.windowStartMs, `${app.site.short || app.site.name}`);
-    }
-    switchMode('compare');
-    return;
-  }
-  switchMode('explorer');
-  if (node.jumpView) switchSubView(node.jumpView);
 }
 
 export function switchSubView(view) {
@@ -341,7 +304,6 @@ function boot() {
   }, () => app);
 
   document.getElementById('modeExplorerBtn')?.addEventListener('click', () => switchMode('explorer'));
-  document.getElementById('modeAcademyBtn')?.addEventListener('click', () => switchMode('academy'));
   document.getElementById('modeCompareBtn')?.addEventListener('click', () => switchMode('compare'));
 
   document.getElementById('tabGlobeBtn')?.addEventListener('click', () => switchSubView('globe'));
@@ -364,7 +326,7 @@ function boot() {
   document.getElementById('lightingModeBtn')?.addEventListener('click', (e) => {
     app.realLighting = !app.realLighting;
     e.currentTarget.setAttribute('aria-pressed', String(app.realLighting));
-    e.currentTarget.textContent = app.realLighting ? '☀️ Real Sunlight' : '💡 Even Light';
+    e.currentTarget.innerHTML = `<span class="inline-flex items-center gap-1">${app.realLighting ? `<svg class="xp-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg> Real Sunlight` : `<svg class="xp-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg> Even Light`}</span>`;
     globe?.setLighting(app.realLighting);
   });
 
@@ -490,7 +452,7 @@ function boot() {
   const tour = createTour([
     {
       title: '1. Clean Workspace & Mode Switcher',
-      body: 'Switch between the 3D Mission Explorer, the Duolingo-style Learning Map, and the Scenario Compare Lab from the top header.',
+      body: 'Switch between the 3D Mission Explorer and the Scenario Compare Lab from the top header.',
       action: () => switchMode('explorer'),
     },
     {
@@ -514,11 +476,6 @@ function boot() {
         document.getElementById('polarScaleBarWrap')?.classList.remove('hidden');
         polar?.draw();
       },
-    },
-    {
-      title: '5. Duolingo-Style Learning Map',
-      body: 'New to lunar mission planning? Open the Learning Map at any time to complete interactive levels with Lumi the Lander!',
-      action: () => switchMode('academy'),
     },
   ]);
 
@@ -605,7 +562,6 @@ function boot() {
   document.querySelectorAll('[data-mob]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const m = btn.dataset.mob;
-      if (m === 'academy') return switchMode('academy');
       switchMode('explorer');
       document.getElementById('paneSite')?.classList.toggle('hidden', m !== 'site');
       document.getElementById('paneView')?.classList.toggle('hidden', m !== 'view');
@@ -645,8 +601,6 @@ function boot() {
   if (app.ui.resultsCollapsed) toggleResultsPanel(true);
   if (app.ui.timelineCollapsed) toggleTimeline(true);
 
-  const xpBadge = document.getElementById('headerXpBadge');
-  if (xpBadge) xpBadge.textContent = `${app.academy.xp} XP`;
   xp = initExperience(xpApi);
   window.addEventListener('lsp-theme', () => updateCurrentTime(false));
   selectSite(app.sites[0], true);

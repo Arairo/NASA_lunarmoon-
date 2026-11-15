@@ -31,6 +31,22 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       const dirLight = new T.DirectionalLight(0xfffbeb, 1.85);
       scene.add(dirLight);
 
+      // Starfield: a few thousand faint points on a distant shell.
+      {
+        const n = 2600, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) {
+          const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = 45 + Math.random() * 10;
+          const q = Math.sqrt(1 - u * u);
+          pos.set([r * q * Math.cos(th), r * u, r * q * Math.sin(th)], i * 3);
+          const b = 0.35 + Math.random() * 0.65, warm = Math.random();
+          col.set([b, b * (0.92 + 0.08 * warm), b * (0.85 + 0.15 * (1 - warm))], i * 3);
+        }
+        const g = new T.BufferGeometry();
+        g.setAttribute('position', new T.BufferAttribute(pos, 3));
+        g.setAttribute('color', new T.BufferAttribute(col, 3));
+        scene.add(new T.Points(g, new T.PointsMaterial({ size: 0.11, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false })));
+      }
+
       const texLoader = new T.TextureLoader();
       const tex = texLoader.load(textureUrl, () => renderGlobe());
       const moonGeo = new T.SphereGeometry(1, 64, 48);

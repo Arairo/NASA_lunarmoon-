@@ -137,6 +137,9 @@ export function initExperience(api) {
       return;
     }
     switchMode('explorer');
+    document.body.classList.remove('xp-enter'); void document.body.offsetWidth;
+    document.body.classList.add('xp-enter');
+    setTimeout(() => document.body.classList.remove('xp-enter'), 1400);
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
       if (tour) proTour.start();
