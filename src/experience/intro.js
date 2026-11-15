@@ -123,12 +123,12 @@ export function mountIntro({ onChoose, onVideo, siteCount = 29 }) {
           </button>
         </div>
       </div>
-    </div>
-    <button type="button" class="xp-tourlink">▶ Watch the 85-second tour</button>
-    <div class="xp-stats">
+      <button type="button" class="xp-tourlink">▶ Watch the 85-second tour</button>
+      <div class="xp-stats">
       <span class="xp-stat"><b>${siteCount}</b> landing sites</span>
       <span class="xp-stat"><b>NASA LOLA</b> terrain horizons</span>
       <span class="xp-stat">Matches <b>JPL Horizons</b> to &lt; 0.01°</span>
+    </div>
     </div>`;
   document.body.appendChild(el);
 
