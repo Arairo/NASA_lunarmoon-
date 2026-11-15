@@ -3,8 +3,8 @@
 
 // Fill these in; the team section stays hidden while `members` is empty.
 export const TEAM = {
-  name: '',
-  members: [],
+  name: 'Dell Monitors',
+  members: ['Ammar Rasyid Bin Remy Azrai', 'Ahmad Ibrahim Shahmi', 'Pratyush Kumar Biswal', 'Muhammad Nawfal Bin Khairul Azlan'],
   location: 'Kuala Lumpur, Malaysia',
 };
 

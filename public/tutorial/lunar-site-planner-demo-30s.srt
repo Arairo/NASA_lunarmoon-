@@ -1,0 +1,31 @@
+1
+00:00:00,400 --> 00:00:02,796
+Where should we land near the Moon's south pole,
+
+2
+00:00:02,646 --> 00:00:03,217
+and when?
+
+3
+00:00:04,300 --> 00:00:06,485
+Beginners walk through it with Lumi:
+
+4
+00:00:06,335 --> 00:00:08,973
+sunlight for power, Earth in view for radio.
+
+5
+00:00:10,300 --> 00:00:12,920
+Planners get the real NASA terrain horizon,
+
+6
+00:00:12,770 --> 00:00:15,677
+the best landing spots, and their link to Earth.
+
+7
+00:00:18,800 --> 00:00:21,809
+If the launch slips, compare the options side by side.
+
+8
+00:00:23,200 --> 00:00:27,531
+Built on NASA LOLA terrain, and checked against JPL Horizons.
