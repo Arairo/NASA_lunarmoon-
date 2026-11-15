@@ -566,6 +566,14 @@ function boot() {
       document.getElementById('paneSite')?.classList.toggle('hidden', m !== 'site');
       document.getElementById('paneView')?.classList.toggle('hidden', m !== 'view');
       document.getElementById('paneResults')?.classList.toggle('hidden', m !== 'results');
+      document.querySelectorAll('[data-mob]').forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle('text-blue-600', on);
+        b.classList.toggle('border-t-2', on);
+        b.classList.toggle('border-blue-600', on);
+        b.classList.toggle('text-slate-600', !on);
+      });
+      if (m === 'view') setTimeout(onLayoutChange, 50);
     });
   });
 
@@ -601,6 +609,11 @@ function boot() {
   if (app.ui.resultsCollapsed) toggleResultsPanel(true);
   if (app.ui.timelineCollapsed) toggleTimeline(true);
 
+  // On phones the panes are tabs: start on the Moon view, matching the highlighted tab.
+  if (window.matchMedia?.('(max-width: 1023px)').matches) {
+    document.querySelector('[data-mob="view"]')?.click();
+    if (!app.ui.timelineCollapsed) toggleTimeline(true);
+  }
   xp = initExperience(xpApi);
   window.addEventListener('lsp-theme', () => updateCurrentTime(false));
   selectSite(app.sites[0], true);

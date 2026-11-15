@@ -155,10 +155,13 @@ export function initExperience(api) {
   // ---------- Best landing spots (friend's idea #1) ----------
   const best = { key: '', cancel: null, timer: 0, spots: [] };
   const card = document.createElement('div');
-  card.className = 'xp-best';
+  card.className = matchMedia?.('(max-width: 720px)').matches ? 'xp-best is-min' : 'xp-best';
   card.innerHTML = '<div class="b-head"><span>Best spots · next 30 days</span><button type="button" class="b-x" aria-label="Hide best spots" title="Hide">–</button></div><div class="b-body"></div>';
   document.getElementById('globeViewport')?.appendChild(card);
-  card.querySelector('.b-x').addEventListener('click', () => card.classList.toggle('is-min'));
+  const minBtn = card.querySelector('.b-x');
+  const syncMin = () => { const m = card.classList.contains('is-min'); minBtn.textContent = m ? '+' : '–'; minBtn.setAttribute('aria-label', m ? 'Show best spots' : 'Hide best spots'); };
+  minBtn.addEventListener('click', () => { card.classList.toggle('is-min'); syncMin(); });
+  syncMin();
   const pctTxt = (f) => `${Math.round(f * 100)}%`;
   function renderBest(state, progress = 0) {
     const body = card.querySelector('.b-body');
