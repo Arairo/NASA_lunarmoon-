@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lunar Site Planner · Mission Explorer &amp; Duolingo-Style Learning Map</title>
+  <meta name="description" content="Compare lunar landing sites and dates: Sun and Earth over real LOLA terrain, solar power and direct-to-Earth link windows, with an interactive Duolingo-style skill map." />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%2315191e' stroke-width='2.5'/%3E%3Cpath d='M3 18h26' stroke='%2315191e' stroke-width='2.5'/%3E%3Ccircle cx='22' cy='9' r='2.5' fill='%23c27c00'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body class="flex flex-col h-screen overflow-hidden select-none">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="flex-none bg-white border-b border-slate-200 px-3 py-2 flex items-center justify-between gap-3 flex-wrap z-30">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-amber-400 shadow-sm">
+          <svg class="w-5 h-5" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="16" cy="16" r="12" stroke="#f8fafc"/>
+            <path d="M4 18h24" stroke="#94a3b8"/>
+            <circle cx="21" cy="10" r="3" fill="#fbbf24" stroke="none"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="font-bold text-slate-900 text-sm sm:text-base leading-tight">Lunar Site Planner</h1>
+            <span class="hidden xl:inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">NASA LOLA + Ephemeris</span>
+          </div>
+          <p class="text-[11px] text-slate-500 hidden sm:block">Solar power, Earth line-of-sight &amp; terrain skyline explorer</p>
+        </div>
+      </div>
+
+      <nav class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200" aria-label="Workspace modes">
+        <button type="button" id="modeExplorerBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 bg-white text-slate-900 shadow-sm">
+          <span>🌕</span> <span>Mission Explorer</span>
+        </button>
+        <button type="button" id="modeAcademyBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
+          <span>🎓</span> <span>Learning Map</span>
+          <span id="headerXpBadge" class="ml-0.5 px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-bold mono text-[10px]">0 XP</span>
+        </button>
+        <button type="button" id="modeCompareBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
+          <span>⚖️</span> <span>Compare</span>
+          <span id="headerCompareCount" class="ml-0.5 px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 font-bold mono text-[10px]">0</span>
+        </button>
+      </nav>
+    </div>
+
+    <div id="clockToolbar" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
+      <label class="flex items-center gap-1.5 text-xs text-slate-500" for="datetimeInput">
+        <span class="hidden md:inline font-medium">UTC</span>
+        <input id="datetimeInput" type="datetime-local" step="60" class="mono text-xs bg-white border border-slate-300 rounded-lg px-2 py-1 text-slate-800 focus:outline-none focus:border-blue-600" />
+      </label>
+      <div class="inline-flex rounded-lg border border-slate-300 bg-white overflow-hidden">
+        <button type="button" id="stepBackDayBtn" class="px-2 py-1 text-xs font-medium hover:bg-slate-100 border-r border-slate-200" title="Back 1 Earth day">−1d</button>
+        <button type="button" id="stepBackHourBtn" class="px-2 py-1 text-xs font-medium hover:bg-slate-100 border-r border-slate-200" title="Back 1 hour">−1h</button>
+        <button type="button" id="playPauseBtn" class="px-3 py-1 text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 min-w-[54px]" title="Play or pause simulation (Space)">Play</button>
+        <button type="button" id="stepFwdHourBtn" class="px-2 py-1 text-xs font-medium hover:bg-slate-100 border-l border-slate-200" title="Forward 1 hour">+1h</button>
+        <button type="button" id="stepFwdDayBtn" class="px-2 py-1 text-xs font-medium hover:bg-slate-100 border-l border-slate-200" title="Forward 1 Earth day">+1d</button>
+      </div>
+      <select id="speedSelect" aria-label="Simulation speed" class="text-xs bg-white border border-slate-300 rounded-lg px-1.5 py-1 text-slate-700">
+        <option value="600">10m/s</option>
+        <option value="3600" selected>1h/s</option>
+        <option value="21600">6h/s</option>
+        <option value="86400">1d/s</option>
+      </select>
+      <button type="button" id="nowBtn" class="px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg" title="Reset to default mission date">Reset Date</button>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <button type="button" id="learnToggleBtn" aria-pressed="false" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 flex items-center gap-1" title="Toggle plain-English explainer notes">
+        <span>💡</span> <span class="hidden sm:inline">Explain</span>
+      </button>
+      <button type="button" id="tourStartBtn" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" title="Interactive guided walkthrough">
+        Tour
+      </button>
+      <button type="button" id="settingsOpenBtn" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 flex items-center gap-1" title="Configure solar array, mast height, and radio assumptions">
+        <span>⚙️</span> <span class="hidden sm:inline">Spacecraft</span>
+      </button>
+      <a href="./planner.html" class="hidden md:inline-flex px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900" title="Switch to CesiumJS expert dashboard">
+        Cesium Expert
+      </a>
+    </div>
+  </header>
+
+  <!-- VIEW 1: MISSION EXPLORER -->
+  <main id="explorerView" class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden relative">
+
+    <!-- LEFT SIDEBAR: LANDING SITES -->
+    <aside id="paneSite" class="sidebar-panel w-full lg:w-[280px] flex-none bg-white border-r border-slate-200 flex flex-col min-h-0 overflow-hidden relative z-10">
+      <div class="p-3 border-b border-slate-100 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <h2 class="font-bold text-slate-900 text-sm">Landing Sites</h2>
+          </div>
+          <div class="flex items-center gap-1">
+            <button type="button" id="toggleCustomCoordBtn" class="text-xs font-semibold text-blue-600 hover:text-blue-800 px-1.5 py-0.5 rounded hover:bg-blue-50">+ Coords</button>
+            <button type="button" id="collapseSiteBtn" class="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs font-bold leading-none" title="Minimize Landing Sites panel" aria-label="Minimize Landing Sites panel">
+              ◂
+            </button>
+          </div>
+        </div>
+
+        <form id="coordForm" class="hidden bg-slate-50 p-2 rounded-lg border border-slate-200 space-y-1.5">
+          <label for="coordInput" class="block text-[11px] font-medium text-slate-600">Custom Latitude, Longitude (°)</label>
+          <div class="flex gap-1.5">
+            <input id="coordInput" placeholder="-89.45, -137.3" autocomplete="off" class="mono text-xs flex-1 min-w-0 bg-white border border-slate-300 rounded px-2 py-1" />
+            <button type="submit" class="px-2.5 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700">Go</button>
+          </div>
+          <p id="coordError" class="text-[11px] text-red-600 hidden"></p>
+        </form>
+
+        <div class="relative">
+          <input id="siteFilterInput" type="search" placeholder="Search sites (e.g. Shackleton, Apollo)…" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg pl-2.5 pr-2 py-1.5 focus:bg-white focus:outline-none focus:border-blue-600" />
+        </div>
+
+        <div class="flex flex-wrap gap-1 pt-0.5" role="group" aria-label="Site categories">
+          <button type="button" data-cat="all" class="cat-btn px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-600 text-white">All</button>
+          <button type="button" data-cat="computed" class="cat-btn px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">Best-Lit</button>
+          <button type="button" data-cat="south" class="cat-btn px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">South Pole</button>
+          <button type="button" data-cat="clps" class="cat-btn px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">CLPS</button>
+          <button type="button" data-cat="apollo" class="cat-btn px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">Apollo</button>
+          <button type="button" data-cat="intl" class="cat-btn px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">Global</button>
+        </div>
+      </div>
+
+      <div id="siteListContainer" class="flex-1 overflow-y-auto p-2 space-y-3 select-text"></div>
+    </aside>
+
+    <!-- CENTER VIEW: 3D GLOBE / 2D LOLA MAP & TIMELINE -->
+    <section id="paneView" class="flex-1 flex flex-col min-w-0 min-h-0 bg-slate-950 relative overflow-hidden z-0">
+
+      <!-- Left Dock Tab (re-expand sites when collapsed) -->
+      <button type="button" id="expandSiteBtn" class="dock-tab hidden absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/95 hover:bg-white text-slate-700 hover:text-blue-600 border-r border-y border-slate-300 shadow-md rounded-l-none rounded-r-lg px-1.5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer backdrop-blur" title="Expand Landing Sites panel">
+        <span>📍 Sites</span> <span class="text-[10px]">▸</span>
+      </button>
+
+      <!-- Right Dock Tab (re-expand assessment when collapsed) -->
+      <button type="button" id="expandResultsBtn" class="dock-tab hidden absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/95 hover:bg-white text-slate-700 hover:text-blue-600 border-l border-y border-slate-300 shadow-md rounded-r-none rounded-l-lg px-1.5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer backdrop-blur" title="Expand Assessment panel">
+        <span>📊 Assessment</span> <span class="text-[10px]">◂</span>
+      </button>
+
+      <!-- Viewport Header Toolbar -->
+      <div class="flex-none bg-white border-b border-slate-200 px-3 py-1.5 flex items-center justify-between gap-2 flex-wrap z-10">
+        <div class="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200" role="tablist">
+          <button type="button" id="tabGlobeBtn" data-view="globe" role="tab" aria-selected="true" class="px-3 py-1 rounded-md text-xs font-semibold bg-slate-900 text-white shadow-sm">
+            🌐 3D Moon Globe
+          </button>
+          <button type="button" id="tabPolarBtn" data-view="polar" role="tab" aria-selected="false" class="px-3 py-1 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900">
+            🗺️ South-Pole Map (LOLA)
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1 flex-wrap">
+          <div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            <button type="button" id="camPoleBtn" class="px-2 py-0.5 rounded text-xs font-medium hover:bg-white text-slate-700" title="Focus on South Pole">South Pole</button>
+            <button type="button" id="camSiteBtn" class="px-2 py-0.5 rounded text-xs font-medium hover:bg-white text-slate-700" title="Zoom to selected site">Fly to Site</button>
+            <button type="button" id="camWholeBtn" class="px-2 py-0.5 rounded text-xs font-medium hover:bg-white text-slate-700" title="View full lunar globe">Whole Moon</button>
+            <button type="button" id="camSystemBtn" class="px-2 py-0.5 rounded text-xs font-medium hover:bg-white text-slate-700 hidden sm:inline" title="Earth-Moon perspective">Earth–Moon</button>
+          </div>
+          <button type="button" id="camStandSunBtn" class="px-2 py-1 rounded text-xs font-medium bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200" title="Look toward Sun from lander mast">Look: Sun</button>
+          <button type="button" id="camStandEarthBtn" class="px-2 py-1 rounded text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200" title="Look toward Earth from lander mast">Look: Earth</button>
+          <button type="button" id="lightingModeBtn" aria-pressed="true" class="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300" title="Toggle realistic directional sunlight vs even illumination">
+            ☀️ Real Sunlight
+          </button>
+          <button type="button" id="focusModeBtn" class="px-2 py-1 rounded text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1 border border-slate-300" title="Maximize Viewport (hide sidebars & timeline)">
+            <span>⛶</span> <span class="hidden sm:inline" id="focusModeLabel">Maximize</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Canvas Viewport -->
+      <div class="relative flex-1 min-h-0 bg-black overflow-hidden">
+        <div id="globeViewport" class="absolute inset-0">
+          <canvas id="globeCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+          <div class="absolute left-3 bottom-3 bg-slate-900/85 backdrop-blur border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] flex items-center gap-3 pointer-events-none">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> Sun ray</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> Earth ray</span>
+            <span class="text-slate-400 hidden sm:inline">Drag to orbit · Scroll to zoom · Click surface to pick</span>
+          </div>
+          <div class="absolute right-3 top-3 flex flex-col gap-1 z-10">
+            <button type="button" id="globeZoomInBtn" class="w-7 h-7 rounded bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700 font-bold text-sm flex items-center justify-center" title="Zoom in">+</button>
+            <button type="button" id="globeZoomOutBtn" class="w-7 h-7 rounded bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700 font-bold text-sm flex items-center justify-center" title="Zoom out">−</button>
+          </div>
+        </div>
+
+        <div id="polarViewport" class="absolute inset-0 hidden bg-black">
+          <canvas id="polarCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+          <div class="absolute right-3 top-3 flex gap-1 z-10">
+            <button type="button" id="polarZoomInBtn" class="px-2.5 py-1 rounded bg-white/90 hover:bg-white text-slate-900 border border-slate-300 font-bold text-xs shadow">+</button>
+            <button type="button" id="polarZoomOutBtn" class="px-2.5 py-1 rounded bg-white/90 hover:bg-white text-slate-900 border border-slate-300 font-bold text-xs shadow">−</button>
+            <button type="button" id="polarResetBtn" class="px-2.5 py-1 rounded bg-white/90 hover:bg-white text-slate-900 border border-slate-300 font-semibold text-xs shadow">Reset</button>
+          </div>
+          <fieldset class="absolute left-3 bottom-3 bg-white/95 backdrop-blur border border-slate-300 rounded-xl p-2.5 text-xs shadow-lg space-y-1 max-w-xs">
+            <legend class="font-bold text-slate-800 text-[11px] uppercase tracking-wider mb-1">South-Pole LOLA Overlay</legend>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="polarOverlay" value="none" checked /> <span>LROC WAC Imagery only</span></label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="polarOverlay" value="illum" /> <span>Average sunlight visible (2027)</span></label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="polarOverlay" value="earth" /> <span>Earth centre above terrain (2027)</span></label>
+            <div id="polarScaleBarWrap" class="hidden pt-1">
+              <div id="polarRampBar" class="h-2.5 rounded border border-slate-400"></div>
+              <div class="flex justify-between mono text-[10px] text-slate-600 mt-0.5"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+            </div>
+          </fieldset>
+        </div>
+
+        <div id="statusToast" class="hidden absolute right-3 bottom-3 bg-slate-900/95 text-white border border-slate-700 rounded-lg px-3 py-1.5 text-xs shadow-lg z-20"></div>
+      </div>
+
+      <!-- BOTTOM TIMELINE (MINIMIZABLE) -->
+      <div id="timelineWrap" class="timeline-panel flex-none h-[168px] bg-white border-t border-slate-200 px-3 py-1.5 flex flex-col">
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <div class="flex items-center gap-2">
+            <button type="button" id="toggleTimelineBtn" class="px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1 border border-slate-200" title="Minimize or maximize timeline size">
+              <span id="timelineToggleIcon">▾</span>
+              <span id="timelineToggleLabel" class="hidden sm:inline">Minimize</span>
+            </button>
+            <h2 id="timelineHeading" class="font-bold text-xs text-slate-800">Operations timeline · Connecting ridge</h2>
+            <span class="text-[11px] text-slate-500 hidden sm:inline">(Click or drag to scrub time)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div id="timelineWinButtons" class="inline-flex rounded-lg border border-slate-300 overflow-hidden bg-slate-50">
+              <button type="button" data-win="15" class="win-btn px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100">15 d</button>
+              <button type="button" data-win="30" class="win-btn px-2 py-0.5 text-[11px] font-semibold bg-slate-900 text-white">1 lunar day (30 d)</button>
+              <button type="button" data-win="90" class="win-btn px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100">3 months</button>
+              <button type="button" data-win="365" class="win-btn px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100">1 year</button>
+            </div>
+          </div>
+        </div>
+        <canvas id="timelineCanvas" tabindex="0" role="slider" aria-label="Operations timeline scrubber" class="flex-1 w-full min-h-0 cursor-pointer"></canvas>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR: ASSESSMENT & SKYLINE (MINIMIZABLE) -->
+    <aside id="paneResults" class="sidebar-panel w-full lg:w-[360px] flex-none bg-white border-l border-slate-200 overflow-y-auto p-3.5 space-y-3 select-text relative z-10">
+      <div id="assessmentRoot"></div>
+    </aside>
+  </main>
+
+  <!-- VIEW 2: DUOLINGO-STYLE LEARNING MAP -->
+  <section id="academyView" class="hidden flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6 select-text">
+    <div id="academyRoot" class="max-w-4xl mx-auto"></div>
+  </section>
+
+  <!-- VIEW 3: SCENARIO COMPARE LAB -->
+  <section id="compareView" class="hidden flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 select-text">
+    <div class="max-w-6xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between gap-3 flex-wrap bg-slate-50/60">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Scenario Comparison Lab</h2>
+          <p class="text-xs text-slate-500">Compare sites, test launch slips across synodic months, or scan LOLA terrain within 5 km for better-lit peaks.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button type="button" id="cmpAddCurrentBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800">+ Add Current Site &amp; Date</button>
+          <button type="button" id="cmpSlipBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100">Schedule Slip ×3 (+1, +2, +3 mo)</button>
+          <button type="button" id="cmpNearbyBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100">🔍 Find Nearby Alternatives (5 km)</button>
+          <button type="button" id="cmpExportBtn" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 bg-white hover:bg-slate-50">Export CSV</button>
+          <button type="button" id="cmpClearBtn" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 bg-white text-red-600 hover:bg-red-50">Clear</button>
+        </div>
+      </div>
+      <div id="compareTableContainer" class="p-4 overflow-x-auto"></div>
+    </div>
+  </section>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="lg:hidden flex-none grid grid-cols-4 border-t border-slate-200 bg-white text-xs font-semibold">
+    <button type="button" data-mob="site" class="py-2.5 text-slate-600">📍 Sites</button>
+    <button type="button" data-mob="view" class="py-2.5 text-blue-600 border-t-2 border-blue-600">🌕 Globe/Map</button>
+    <button type="button" data-mob="results" class="py-2.5 text-slate-600">📊 Assessment</button>
+    <button type="button" data-mob="academy" class="py-2.5 text-slate-600">🎓 Learn Map</button>
+  </nav>
+
+  <!-- SPACECRAFT ASSUMPTIONS MODAL -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Spacecraft Assumptions</h2>
+          <p class="text-xs text-slate-500">Defaults approximate a commercial CLPS-class lunar lander.</p>
+        </div>
+        <button type="button" id="settingsCloseX" class="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
+      </div>
+      <form id="settingsForm" class="space-y-3 text-xs">
+        <fieldset class="border border-slate-200 rounded-xl p-3 grid grid-cols-2 gap-3">
+          <legend class="font-bold text-slate-700 px-1">Solar Array &amp; Mast</legend>
+          <label class="col-span-2 flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Array orientation mode</span>
+            <select name="mode" class="border border-slate-300 rounded-lg px-2 py-1.5 bg-white">
+              <option value="vertical_tracking">Vertical, azimuth-tracking (polar standard)</option>
+              <option value="horizontal">Horizontal (top deck)</option>
+              <option value="fixed_vertical">Vertical, fixed azimuth</option>
+              <option value="two_axis">Two-axis sun-tracking</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Array area (m²)</span>
+            <input name="areaM2" type="number" min="0.1" step="0.1" value="2.0" class="border border-slate-300 rounded-lg px-2 py-1" />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Cell efficiency (%)</span>
+            <input name="efficiency" type="number" min="5" max="45" step="0.5" value="29.0" class="border border-slate-300 rounded-lg px-2 py-1" />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Continuous load (W)</span>
+            <input name="loadW" type="number" min="10" step="5" value="120" class="border border-slate-300 rounded-lg px-2 py-1" />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Solar/antenna mast height (m)</span>
+            <input name="mastHeightM" type="number" min="0.5" max="50" step="0.5" value="2.0" class="border border-slate-300 rounded-lg px-2 py-1" />
+          </label>
+        </fieldset>
+        <fieldset class="border border-slate-200 rounded-xl p-3 grid grid-cols-2 gap-3">
+          <legend class="font-bold text-slate-700 px-1">Direct-to-Earth (DTE) Radio</legend>
+          <label class="col-span-2 flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Radio preset (to DSN 34 m antenna)</span>
+            <select name="preset" class="border border-slate-300 rounded-lg px-2 py-1.5 bg-white">
+              <option value="s_lga">S-band, low-gain antenna (10 W, 5 dBi)</option>
+              <option value="s_mga" selected>S-band, medium-gain antenna (10 W, 15 dBi)</option>
+              <option value="x_hga">X-band, high-gain antenna (15 W, 25 dBi)</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Target data rate (kbps)</span>
+            <input name="dataRateKbps" type="number" min="1" step="1" value="256" class="border border-slate-300 rounded-lg px-2 py-1" />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-slate-600 font-medium">Min terrain clearance (°)</span>
+            <input name="minClearanceDeg" type="number" min="0" max="15" step="0.5" value="2.0" class="border border-slate-300 rounded-lg px-2 py-1" />
+          </label>
+        </fieldset>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="settingsCancelBtn" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 font-semibold">Apply Assumptions</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- GLOSSARY MODAL -->
+  <div id="glossaryModal" class="hidden fixed inset-0 bg-slate-900/35 z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-4 shadow-xl space-y-2">
+      <div class="flex items-center justify-between">
+        <h3 id="glossaryTitle" class="font-bold text-slate-900 text-sm">Term</h3>
+        <button type="button" id="glossaryCloseBtn" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+      </div>
+      <p id="glossaryBody" class="text-xs text-slate-600 leading-relaxed"></p>
+    </div>
+  </div>
+
+  <!-- TOUR OVERLAY -->
+  <div id="tourOverlay" class="hidden fixed bottom-5 right-5 z-50 max-w-sm w-full bg-white border-2 border-blue-600 rounded-2xl p-4 shadow-2xl space-y-2.5">
+    <div class="flex items-center justify-between">
+      <span id="tourStepLabel" class="mono text-[11px] font-bold text-blue-600 uppercase">Step 1 of 5</span>
+      <button type="button" id="tourCloseBtn" class="text-xs text-slate-400 hover:text-slate-700">Skip tour ✕</button>
+    </div>
+    <h3 id="tourTitle" class="font-bold text-slate-900 text-sm">Welcome</h3>
+    <p id="tourBody" class="text-xs text-slate-600 leading-relaxed"></p>
+    <div class="flex items-center justify-between pt-1">
+      <button type="button" id="tourPrevBtn" class="px-2.5 py-1 rounded border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50">Back</button>
+      <div class="flex gap-1.5">
+        <button type="button" id="tourActionBtn" class="px-2.5 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold hover:bg-blue-100">Show me</button>
+        <button type="button" id="tourNextBtn" class="px-3 py-1 rounded bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
