@@ -23,6 +23,9 @@
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "autoprefixer": "^10.6.2",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^3.4.17",
     "vite": "^6.4.1",
     "vite-plugin-cesium": "^1.2.23"
   },

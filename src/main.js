@@ -1,4 +1,5 @@
 // Main application bootstrap: Mission Explorer, Duolingo-style Learning Map & Scenario Compare.
+import './tailwind.css';
 import './styles.css';
 import sitesData from './data/sites.js';
 import { clamp, SITE_GROUPS, SITE_BADGES, SYNODIC_MONTH_DAYS } from './core/constants.js';
@@ -11,6 +12,7 @@ import { renderAssessmentPanel } from './ui/assessment.js';
 import { addScenario, renderCompareTable, exportCompareCsv } from './ui/compare.js';
 import { createTour, openGlossary, showToast } from './ui/modals.js';
 import { renderAcademy } from './academy/academyView.js';
+import { initExperience } from './experience/index.js';
 
 export const app = {
   mode: 'explorer',
@@ -70,6 +72,8 @@ try {
 
 let globe = null;
 let polar = null;
+let xp = null;
+const xpApi = { app, sites: sitesData, selectSite: (...a) => selectSite(...a), setTime: (...a) => setTime(...a), switchMode: (...a) => switchMode(...a), getGlobe: () => globe, setHint: () => {} };
 
 export function onLayoutChange() {
   window.dispatchEvent(new Event('resize'));
@@ -136,6 +140,7 @@ export function toggleFocusMode() {
 export function selectSite(site, fly = false) {
   if (!site) return;
   app.site = site;
+  xp?.busy();
   app.ctx = prepareSite(site, null, app.config);
   app.scan = scanWindow(app.ctx, app.windowStartMs, app.windowDays, app.config);
   const heading = document.getElementById('timelineHeading');
@@ -171,6 +176,7 @@ export function updateCurrentTime(recompute = false) {
     onCollapseResults: () => toggleResultsPanel(true),
   });
   drawTimeline(document.getElementById('timelineCanvas'), app.scan, app.timeMs, app.config);
+  xp?.update();
 }
 
 export function setTime(ms, reanchor = false) {
@@ -319,7 +325,7 @@ function boot() {
       group: 'computed',
     };
     selectSite(custom, false);
-  });
+  }, { onHint: (t) => xpApi.setHint(t) });
 
   polar = createPolarMapRenderer(document.getElementById('polarCanvas'), (pick) => {
     if (pick.site) return selectSite(pick.site, true);
@@ -641,6 +647,8 @@ function boot() {
 
   const xpBadge = document.getElementById('headerXpBadge');
   if (xpBadge) xpBadge.textContent = `${app.academy.xp} XP`;
+  xp = initExperience(xpApi);
+  window.addEventListener('lsp-theme', () => updateCurrentTime(false));
   selectSite(app.sites[0], true);
 }
 

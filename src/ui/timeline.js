@@ -5,6 +5,8 @@ export function drawTimeline(canvas, scan, timeMs, config) {
   const { ctx, w, h } = fitCanvas(canvas);
   if (!ctx || w < 80 || h < 40 || !scan) return;
   ctx.clearRect(0, 0, w, h);
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const C = dark ? { row: '#1b2130', text: '#c7c9d1', tick: '#8e93a0', cursor: '#ffffff' } : { row: '#f1f5f9', text: '#334155', tick: '#64748b', cursor: '#0f172a' };
   const pad = { l: 58, r: 10, t: 4, b: 18 };
   const pw = w - pad.l - pad.r;
   const rows = ['Sun', 'Power', 'Earth', 'DSN', 'DTE link'];
@@ -18,9 +20,9 @@ export function drawTimeline(canvas, scan, timeMs, config) {
   ctx.textBaseline = 'middle';
   rows.forEach((lbl, r) => {
     const y0 = pad.t + r * rowH;
-    ctx.fillStyle = '#f1f5f9';
+    ctx.fillStyle = C.row;
     ctx.fillRect(pad.l, y0 + 2, pw, rowH - 4);
-    ctx.fillStyle = '#334155';
+    ctx.fillStyle = C.text;
     ctx.textAlign = 'right';
     ctx.fillText(lbl, pad.l - 8, y0 + rowH / 2);
   });
@@ -55,7 +57,7 @@ export function drawTimeline(canvas, scan, timeMs, config) {
   }
 
   ctx.font = '10px "IBM Plex Mono", monospace';
-  ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillStyle = C.tick; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   const stepTicks = 6;
   for (let k = 0; k <= stepTicks; k++) {
     const ms = scan.startMs + (k / stepTicks) * (scan.endMs - scan.startMs);
@@ -65,7 +67,7 @@ export function drawTimeline(canvas, scan, timeMs, config) {
 
   if (timeMs >= scan.startMs && timeMs <= scan.endMs) {
     const cx = x(timeMs);
-    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2;
+    ctx.strokeStyle = C.cursor; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, h - pad.b); ctx.stroke();
   }
 }

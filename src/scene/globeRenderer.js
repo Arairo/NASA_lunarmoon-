@@ -6,6 +6,9 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
   let yaw = -0.45, pitch = -1.15, distance = 3.1;
   let targetYaw = yaw, targetPitch = pitch, targetDist = distance;
   let dragging = null;
+  // Pan offset in the camera's screen plane (Creo: Shift + middle-drag).
+  let panX = 0, panY = 0, targetPanX = 0, targetPanY = 0;
+  const onHint = options.onHint || (() => {});
   let sunDir = [1, 0.1, 0];
   let earthDir = [0.6, 0.7, -0.1];
   let realLighting = true;
@@ -71,6 +74,9 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     yaw += (targetYaw - yaw) * 0.25;
     pitch += (targetPitch - pitch) * 0.25;
     distance += (targetDist - distance) * 0.25;
+    panX += (targetPanX - panX) * 0.25;
+    panY += (targetPanY - panY) * 0.25;
+    const settling = Math.abs(targetYaw - yaw) + Math.abs(targetPitch - pitch) + Math.abs(targetDist - distance) + Math.abs(targetPanX - panX) + Math.abs(targetPanY - panY) > 1e-4;
 
     if (three) {
       three.renderer.setSize(cw, ch, false);
@@ -82,6 +88,12 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       const cz = distance * Math.cos(pitch) * Math.cos(yaw);
       three.camera.position.set(cx, cy, cz);
       three.camera.lookAt(0, 0, 0);
+      if (panX || panY) {
+        three.camera.updateMatrixWorld();
+        const right = new three.T.Vector3().setFromMatrixColumn(three.camera.matrixWorld, 0);
+        const up = new three.T.Vector3().setFromMatrixColumn(three.camera.matrixWorld, 1);
+        three.camera.position.addScaledVector(right, panX).addScaledVector(up, panY);
+      }
 
       three.ambient.intensity = realLighting ? 0.34 : 1.35;
       three.dirLight.intensity = realLighting ? 1.85 : 0.35;
@@ -96,6 +108,10 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
         three.earthLine.geometry.setFromPoints([new three.T.Vector3(...p), new three.T.Vector3(...eEnd)]);
       }
       three.renderer.render(three.scene, three.camera);
+      if (settling && !renderGlobe.queued) {
+        renderGlobe.queued = true;
+        requestAnimationFrame(() => { renderGlobe.queued = false; renderGlobe(); });
+      }
     } else {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const w = Math.round(cw * dpr), h = Math.round(ch * dpr);
@@ -112,22 +128,49 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     }
   }
 
+  // Mouse controls modelled on PTC Creo, with fallbacks for trackpads:
+  //   Middle-drag = spin, Shift + middle-drag = pan, Ctrl + middle-drag = zoom,
+  //   wheel = zoom. Left-drag also spins and right-drag also pans, so a laptop
+  //   without a middle button still has every move. Left-click picks a site.
+  const actionFor = (e) => {
+    if (e.button === 1) return e.shiftKey ? 'pan' : (e.ctrlKey || e.metaKey) ? 'zoom' : 'spin';
+    if (e.button === 2) return 'pan';
+    return e.shiftKey ? 'pan' : 'spin';
+  };
+  const HINTS = { spin: 'Spin', pan: 'Pan', zoom: 'Zoom' };
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
   canvas.addEventListener('pointerdown', (e) => {
-    dragging = { x: e.clientX, y: e.clientY, yaw: targetYaw, pitch: targetPitch, moved: false };
+    const action = actionFor(e);
+    dragging = { x: e.clientX, y: e.clientY, yaw: targetYaw, pitch: targetPitch, dist: targetDist, panX: targetPanX, panY: targetPanY, moved: false, action, button: e.button };
     canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = action === 'pan' ? 'move' : action === 'zoom' ? 'ns-resize' : 'grabbing';
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!dragging) return;
     const dx = e.clientX - dragging.x, dy = e.clientY - dragging.y;
-    if (Math.abs(dx) + Math.abs(dy) > 4) dragging.moved = true;
-    targetYaw = dragging.yaw - dx * 0.006;
-    targetPitch = clamp(dragging.pitch + dy * 0.006, -1.53, 1.53);
+    if (Math.abs(dx) + Math.abs(dy) > 4) {
+      if (!dragging.moved) onHint(HINTS[dragging.action]);
+      dragging.moved = true;
+    }
+    if (dragging.action === 'spin') {
+      targetYaw = dragging.yaw - dx * 0.006;
+      targetPitch = clamp(dragging.pitch + dy * 0.006, -1.53, 1.53);
+    } else if (dragging.action === 'pan') {
+      const k = (distance * 0.9) / Math.max(200, canvas.clientHeight);
+      targetPanX = clamp(dragging.panX - dx * k, -2, 2);
+      targetPanY = clamp(dragging.panY + dy * k, -2, 2);
+    } else {
+      targetDist = clamp(dragging.dist * Math.exp(dy * 0.006), 1.15, 6.5);
+    }
     renderGlobe();
   });
-  canvas.addEventListener('pointerup', (e) => {
+  const endDrag = (e) => {
     const d = dragging;
     dragging = null;
-    if (!d || d.moved || !three) return;
+    canvas.style.cursor = '';
+    if (d?.moved) onHint(null);
+    if (!d || d.moved || d.button !== 0 || !three) return;
     const rect = canvas.getBoundingClientRect();
     const mouse = new three.T.Vector2(
       ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -142,10 +185,12 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       const lon = Math.atan2(pt.x, pt.z) * RAD;
       onPickSite({ lat, lon });
     }
-  });
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', () => { dragging = null; canvas.style.cursor = ''; onHint(null); });
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    targetDist = clamp(targetDist * Math.exp(e.deltaY * 0.0012), 1.35, 6.5);
+    targetDist = clamp(targetDist * Math.exp(e.deltaY * 0.0012), 1.15, 6.5);
     renderGlobe();
   }, { passive: false });
 
@@ -172,6 +217,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     },
     flyToSite(site) {
       if (!site) return;
+      targetPanX = 0; targetPanY = 0;
       selectedSite = site;
       targetYaw = site.lon * DEG;
       targetPitch = clamp(site.lat * DEG, -1.52, 1.52);
@@ -179,15 +225,28 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       renderGlobe();
     },
     southPole() {
+      targetPanX = 0; targetPanY = 0;
       targetYaw = 0; targetPitch = -1.48; targetDist = 2.05;
       renderGlobe();
     },
     overview() {
+      targetPanX = 0; targetPanY = 0;
       targetYaw = 0.2; targetPitch = -0.35; targetDist = 3.2;
       renderGlobe();
     },
     earthMoon() {
+      targetPanX = 0; targetPanY = 0;
       targetYaw = 0.4; targetPitch = -0.2; targetDist = 4.8;
+      renderGlobe();
+    },
+    reset() {
+      targetYaw = -0.45; targetPitch = -1.15; targetDist = 3.1; targetPanX = 0; targetPanY = 0;
+      renderGlobe();
+    },
+    view(name) {
+      targetPanX = 0; targetPanY = 0;
+      const v = { front: [0, 0, 3], back: [Math.PI, 0, 3], left: [-Math.PI / 2, 0, 3], right: [Math.PI / 2, 0, 3], top: [0, 1.53, 3], bottom: [0, -1.53, 3] }[name];
+      if (v) [targetYaw, targetPitch, targetDist] = v;
       renderGlobe();
     },
     zoomBy(f) {
