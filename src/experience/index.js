@@ -8,6 +8,7 @@ import { mountNotch, notchBusy, notchUpdate } from './notch.js';
 import { createSpotlight } from './spotlight.js';
 import { createWalk } from './walk.js';
 import { findBestSpots } from './bestSpots.js';
+import { soundOn, toggleSound } from './sound.js';
 import { prepareSite, evaluate } from '../core/analysis.js';
 
 const store = {
@@ -67,11 +68,13 @@ export function initExperience(api) {
       <button type="button" class="xp-chip" data-x="video" title="Watch the 85-second narrated tour of Professional mode">▶ Video</button>
       <button type="button" class="xp-chip" data-x="beginner" title="Switch to the guided Beginner walk">Beginner</button>
       <a class="xp-chip" href="./planner.html" title="CesiumJS planner with LOLA 3D terrain, video tutorial and full-precision tools">3D terrain (Cesium)</a>
+      <button type="button" class="xp-chip xp-icon-btn" data-x="sound" data-sound-label aria-label="Mute sounds" title="Sound on / off">🔊</button>
       <button type="button" class="xp-chip xp-icon-btn" data-x="theme" data-theme-label aria-label="Switch light or dark mode" title="Light / dark"></button>`;
     headerRight.prepend(tools);
     tools.querySelector('[data-x="beginner"]').addEventListener('click', () => setMode('beginner'));
     tools.querySelector('[data-x="video"]').addEventListener('click', () => openVideo());
     tools.querySelector('[data-x="theme"]').addEventListener('click', toggleTheme);
+    tools.querySelector('[data-x="sound"]').addEventListener('click', toggleSound);
     applyTheme(document.documentElement.dataset.theme);
   }
 
@@ -144,6 +147,7 @@ export function initExperience(api) {
   const walk = createWalk({
     app, sites,
     onToggleTheme: toggleTheme,
+    onToggleSound: toggleSound,
     onOpenPro: (site, ms, withTour) => {
       if (site) {
         app.windowStartMs = ms;

@@ -111,6 +111,8 @@ body { background: var(--xp-bg); color: var(--xp-ink); -webkit-font-smoothing: a
 
 .xp-stage { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px; z-index: 2; }
 
+.xp-moon3d { width: 100%; height: 100%; display: block; box-shadow: none !important; }
+.xp-moon3d::after { display: none; }
 .xp-moon-wrap { position: relative; width: min(42vh, 340px); aspect-ratio: 1; margin-bottom: 28px; }
 .xp-moon-glow {
   position: absolute; inset: -30%;
@@ -544,3 +546,5 @@ body.xp-enter header { animation: xpHeadIn 0.7s var(--xp-ease) both; }
 .xp-video .v-head span { display: flex; align-items: center; gap: 8px; }
 .xp-video video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
 #xp-intro.is-choosing .xp-tourlink { opacity: 1; }
+.xp-corner { position: absolute; top: 18px; right: 20px; z-index: 3; display: flex; gap: 8px; }
+.xp-corner .xp-skip { position: static; }

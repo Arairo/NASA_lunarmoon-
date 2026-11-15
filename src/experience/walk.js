@@ -7,6 +7,7 @@ import { horizonAt } from '../core/horizon.js';
 import { SYNODIC_MONTH_DAYS, clamp } from '../core/constants.js';
 import { esc, fmtLatLon, fmtHours } from '../ui/format.js';
 import { setLumi } from './lumi.js';
+import { play } from './sound.js';
 
 const DAY = 86400000;
 const FEATURED = [
@@ -118,7 +119,7 @@ function describe(scan, i) {
   return `Right now ${sun}, and ${earth}.`;
 }
 
-export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
+export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme, onToggleSound }) {
   const st = { step: 0, site: null, startMs: DATES[0].ms, ctx: null, scan: null, v: null, idx: 0, playing: false, slips: null, other: null, otherRes: null };
   const root = document.createElement('section');
   root.id = 'xp-walk';
@@ -127,6 +128,7 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
     <div class="w-top">
       <div class="w-brand"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="8" r="2.5" fill="#ffb300"/></svg> Lunar Site Planner</div>
       <div class="w-progress" aria-hidden="true"><i></i></div>
+      <button type="button" class="xp-chip xp-icon-btn" data-a="sound" data-sound-label aria-label="Mute sounds" title="Sound on / off">🔊</button>
       <button type="button" class="xp-chip xp-icon-btn" data-a="theme" data-theme-label aria-label="Switch light or dark mode" title="Light / dark">◐</button>
       <button type="button" class="xp-chip" data-a="pro">Professional mode</button>
     </div>
@@ -142,6 +144,7 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
   const backBtn = root.querySelector('[data-a="back"]');
   root.querySelector('[data-a="pro"]').addEventListener('click', () => onOpenPro(st.site, st.startMs, false));
   root.querySelector('[data-a="theme"]').addEventListener('click', onToggleTheme);
+  root.querySelector('[data-a="sound"]').addEventListener('click', () => onToggleSound?.());
   backBtn.addEventListener('click', () => go(st.step - 1));
   nextBtn.addEventListener('click', () => STEPS[st.step].next ? STEPS[st.step].next() : go(st.step + 1));
 
@@ -431,6 +434,9 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
     scene.innerHTML = `<div class="w-lumi" data-lumi></div><div>${step.render()}</div>`;
     setLumi(scene.querySelector('[data-lumi]'), mood, reaction, 140);
     step.bind?.();
+    // Verdict screens get a matching chime (green / amber / red light).
+    const light = scene.querySelector('.w-verdict .w-light, .w-big .w-light');
+    if (light) setTimeout(() => play(light.classList.contains('green') ? 'go' : light.classList.contains('amber') ? 'care' : 'nogo'), 250);
     nextBtn.textContent = step.cta || 'Continue';
     nextBtn.disabled = step.ready ? !step.ready() : false;
     backBtn.style.visibility = i === 0 ? 'hidden' : 'visible';
@@ -440,6 +446,7 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme }) {
   function go(i) {
     if (i < 0 || i >= STEPS.length) return;
     st.playing = false;
+    play('tick');
     const doIt = () => {
       st.step = i;
       render(i);

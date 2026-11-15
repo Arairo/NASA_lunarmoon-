@@ -2,6 +2,7 @@
 // area stays sharp inside a glowing ring, and Lumi explains it in a bubble.
 
 import { setLumi } from './lumi.js';
+import { play } from './sound.js';
 
 let root = null;
 
@@ -111,6 +112,7 @@ export function createSpotlight(steps, { label = 'Guide', onDone } = {}) {
         requestAnimationFrame(() => placeCoach(coach, r));
       });
       setLumi(coach.querySelector('.lumi-slot'), step.mood || 'happy', idx === steps.length - 1 ? 'cheer' : 'hop', 84);
+      play(idx === steps.length - 1 ? 'go' : 'pop');
       setTimeout(() => bubble.querySelector('[data-a="next"]')?.focus({ preventScroll: true }), 50);
     }
     requestAnimationFrame(() => placeCoach(coach, r));

@@ -1,6 +1,9 @@
 // Cinematic opening: light ribbons, the Moon rising out of black, the title,
 // then Start splits into the two modes (Beginner / Professional).
 
+import * as THREE from 'three';
+import { play, soundOn, toggleSound } from './sound.js';
+
 const RIBBON_COLOURS = ['#ffb300', '#ff7a00', '#ffd60a', '#38bdf8', '#2997ff', '#ffffff', '#ff453a', '#bf5af2'];
 
 function ribbonsHtml(count = 34) {
@@ -17,6 +20,71 @@ function ribbonsHtml(count = 34) {
   return html;
 }
 
+/**
+ * A real 3D Moon that is "flicked": it starts spinning fast and coasts to a
+ * stop, like a desk globe. Angle follows total * (1 - e^(-t/tau)), so the
+ * speed decays smoothly. Returns a function that frees the WebGL context.
+ */
+function spinMoon(canvas, base) {
+  const still = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  } catch {
+    canvas.style.background = `center / cover url('${base}data/moonGlobal.jpg')`;
+    canvas.style.borderRadius = '50%';
+    return () => {};
+  }
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
+  camera.position.set(0, 0, 4.1);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.08));
+  const sun = new THREE.DirectionalLight(0xfff1d6, 2.6);
+  sun.position.set(4, 1.6, 2.2); // upper right, like the golden glow behind it
+  scene.add(sun);
+  const loader = new THREE.TextureLoader();
+  let ready = false;
+  const tex = loader.load(`${base}data/moonGlobal.jpg`, () => { ready = true; });
+  if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 });
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), mat);
+  moon.rotation.z = 0.12;
+  scene.add(moon);
+  loader.load(`${base}data/moon_wac_global_4k.jpg`, (hi) => {
+    if ('colorSpace' in hi) hi.colorSpace = THREE.SRGBColorSpace;
+    mat.map = hi; mat.needsUpdate = true;
+  });
+  const TOTAL = still ? 0 : Math.PI * 7; // three and a half turns
+  const TAU = 1.15; // seconds; the spin is ~99% done after 5*TAU
+  const END = -Math.PI / 2; // stop with the near side (the face we see from Earth) toward us
+  // Spin time only advances once the image is in and at most 1/30 s per frame,
+  // so a busy page (the app booting behind the intro) cannot skip the spin.
+  let raf = 0, last = 0, s = 0, alive = true;
+  const frame = (t) => {
+    if (!alive) return;
+    const dt = last ? Math.min(0.033, (t - last) / 1000) : 0;
+    last = t;
+    if (ready) s += dt;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (w && (canvas.width !== Math.round(w * renderer.getPixelRatio()))) {
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+    }
+    moon.rotation.y = END - TOTAL * Math.exp(-s / TAU);
+    renderer.render(scene, camera);
+    if (s < TAU * 7) raf = requestAnimationFrame(frame);
+  };
+  raf = requestAnimationFrame(frame);
+  return () => {
+    alive = false;
+    cancelAnimationFrame(raf);
+    mat.map?.dispose(); mat.dispose(); moon.geometry.dispose();
+    renderer.dispose();
+    renderer.forceContextLoss?.();
+  };
+}
+
 export function mountIntro({ onChoose, onVideo, siteCount = 29 }) {
   const base = import.meta.env.BASE_URL;
   const el = document.createElement('div');
@@ -25,11 +93,11 @@ export function mountIntro({ onChoose, onVideo, siteCount = 29 }) {
   el.setAttribute('aria-label', 'Welcome to Lunar Site Planner');
   el.innerHTML = `
     <div class="xp-ribbons">${ribbonsHtml()}</div>
-    <button type="button" class="xp-skip">Skip intro</button>
+    <div class="xp-corner"><button type="button" class="xp-skip xp-sound" data-sound-label aria-pressed="${soundOn()}" aria-label="${soundOn() ? 'Mute sounds' : 'Turn sounds on'}">${soundOn() ? '🔊' : '🔇'}</button><button type="button" class="xp-skip">Skip intro</button></div>
     <div class="xp-stage">
       <div class="xp-moon-wrap">
         <div class="xp-moon-glow"></div>
-        <div class="xp-moon" style="background-image:url('${base}data/moonGlobal.jpg')"></div>
+        <canvas class="xp-moon xp-moon3d" aria-hidden="true"></canvas>
       </div>
       <div class="xp-eyebrow">NASA Space Apps 2026 · Lunar south pole</div>
       <h1 class="xp-title">Lunar Site Planner</h1>
@@ -64,12 +132,14 @@ export function mountIntro({ onChoose, onVideo, siteCount = 29 }) {
     </div>`;
   document.body.appendChild(el);
 
+  const stopSpin = spinMoon(el.querySelector('.xp-moon3d'), base);
   const start = el.querySelector('.xp-start');
   const modes = el.querySelector('.xp-modes');
   const cta = el.querySelector('.xp-cta');
 
   const split = () => {
     if (modes.classList.contains('is-open')) return;
+    play('tadum');
     start.classList.add('is-splitting');
     setTimeout(() => {
       cta.style.display = 'none';
@@ -81,16 +151,18 @@ export function mountIntro({ onChoose, onVideo, siteCount = 29 }) {
 
   start.addEventListener('click', split);
   el.querySelector('.xp-tourlink').addEventListener('click', () => onVideo?.());
-  el.querySelector('.xp-skip').addEventListener('click', () => {
+  el.querySelector('.xp-sound').addEventListener('click', toggleSound);
+  el.querySelector('.xp-skip:not(.xp-sound)').addEventListener('click', (e) => {
     el.classList.add('is-fast');
-    el.querySelector('.xp-skip').remove();
+    e.currentTarget.remove();
   });
   modes.querySelectorAll('.xp-mode').forEach((b) => {
     b.addEventListener('click', () => {
       try { localStorage.setItem('lsp.introSeen', '1'); } catch {}
+      play('whoosh');
       el.classList.add('is-leaving');
       onChoose(b.dataset.mode);
-      setTimeout(() => el.remove(), 850);
+      setTimeout(() => { stopSpin(); el.remove(); }, 850);
     });
   });
   el.addEventListener('keydown', (e) => {
