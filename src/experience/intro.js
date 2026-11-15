@@ -125,7 +125,7 @@ export function mountIntro({ onChoose, onAbout, siteCount = 29 }) {
       </div>
       <button type="button" class="xp-tourlink">About this project</button>
       <div class="xp-stats">
-      <span class="xp-stat"><b>${siteCount}</b> landing sites</span>
+      <span class="xp-stat"><b>${siteCount}</b> lunar sites</span>
       <span class="xp-stat"><b>NASA LOLA</b> terrain horizons</span>
       <span class="xp-stat">Matches <b>JPL Horizons</b> to &lt; 0.01°</span>
     </div>

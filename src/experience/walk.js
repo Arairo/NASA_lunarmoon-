@@ -268,7 +268,7 @@ export function createWalk({ app, sites, onOpenPro, onExit, onToggleTheme, onTog
             <div class="w-fact"><div class="k">Sunlight over 30 days</div><div class="v">${Math.round(ss.litFraction * 100)}%</div></div>
             <div class="w-fact"><div class="k">Longest darkness</div><div class="v">${fmtHours(ss.longestDarkH)}${ss.longestDarkOpenEnded ? '+' : ''}</div></div>
             <div class="w-fact"><div class="k">Average power</div><div class="v">${ss.avgPowerW.toFixed(0)} W</div></div>
-            <div class="w-fact"><div class="k">Highest Sun</div><div class="v">${ss.maxSunEl.toFixed(1)}°</div></div>
+            <div class="w-fact"><div class="k">Highest Sun (above level)</div><div class="v">${ss.maxSunEl.toFixed(1)}°</div></div>
           </div>
           ${why('Why does the Sun behave like this?', 'The Moon’s axis is tilted only about 1.5°. Near the poles the Sun never climbs high: it circles the whole sky once every 29.5 days, skimming just a few degrees above the horizon. A crater rim or hill kilometres away can block it for days. That’s why missions aim for high ridges, and why some crater floors haven’t seen sunlight in billions of years. Near the equator it’s simpler: about two weeks of day, then two weeks of night.')}
           <p class="w-note">Power assumes ${app.config.power.areaM2} m² of panels at ${(app.config.power.efficiency * 100).toFixed(0)}% efficiency. ${RULES_NOTE.split('. Earth:')[0]}.</p></div>`;

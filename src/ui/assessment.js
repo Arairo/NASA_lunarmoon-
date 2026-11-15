@@ -192,8 +192,8 @@ export function renderAssessmentPanel(container, app, callbacks = {}) {
             <span class="text-[10px] text-slate-500 block">Battery: ${st.batteryKWh.toFixed(1)} kWh</span>
           </div>
           <div class="p-2 rounded-lg bg-slate-50 border border-slate-200">
-            <span class="text-[11px] text-slate-500 block">Earth Visible</span>
-            <strong class="mono text-sm text-slate-900">${pct(st.earthVisibleFraction, 1)}</strong>
+            <span class="text-[11px] text-slate-500 block" title="Share of the window with Earth's centre above the terrain (needed for a direct link). Any part of Earth's disk: ${pct(st.earthVisibleFraction, 1)}">Earth in view</span>
+            <strong class="mono text-sm text-slate-900">${pct(st.earthCentreFraction, 1)}</strong>
             <span class="text-[10px] text-slate-500 block">DTE link: ${pct(st.dteFraction, 1)}</span>
           </div>
           <div class="p-2 rounded-lg bg-slate-50 border border-slate-200">

@@ -68,7 +68,7 @@ export function initExperience(api) {
     tools.innerHTML = `
       <button type="button" class="xp-chip" data-x="video" title="Watch the 85-second narrated tour of Professional mode">▶ Video</button>
       <button type="button" class="xp-chip" data-x="beginner" title="Switch to the guided Beginner walk">Beginner</button>
-      <a class="xp-chip" href="./planner.html" title="CesiumJS planner with LOLA 3D terrain, video tutorial and full-precision tools">3D terrain (Cesium)</a>
+      <a class="xp-chip" data-x="terrain" href="./planner.html#from=pro" title="Open this site and date over real LOLA 3D terrain with shadows (CesiumJS)">Terrain 3D ↗</a>
       <button type="button" class="xp-chip xp-icon-btn" data-x="sound" data-sound-label aria-label="Mute sounds" title="Sound on / off">🔊</button>
       <button type="button" class="xp-chip xp-icon-btn" data-x="theme" data-theme-label aria-label="Switch light or dark mode" title="Light / dark"></button>`;
     headerRight.prepend(tools);
@@ -174,7 +174,12 @@ export function initExperience(api) {
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
       if (tour) proTour.start();
-      else if (!store.get('lsp.controlsSeen')) controlsCoach.start();
+      else if (!store.get('lsp.controlsSeen')) {
+        // A gentle hint instead of a blocking pop-up; "?" on the globe opens the full controls guide.
+        store.set('lsp.controlsSeen', '1');
+        api.setHint('Drag to spin · Shift-drag to pan · Scroll to zoom · ? for controls');
+        setTimeout(() => api.setHint(null), 6000);
+      }
     }, 500);
   }
 
@@ -199,7 +204,9 @@ export function initExperience(api) {
         <i style="background:${sp.color}"></i>
         <span class="b-txt"><b>${sp.title}</b><span>${sp.r.site.short && sp.r.site.searched ? 'LOLA search cell' : sp.r.site.name}</span></span>
         <span class="b-num" title="Share of the window with the Sun up AND Earth in view">${pctTxt(sp.r.ops)}</span>
-      </button>`).join('') + `<p class="b-note">Ranked by time with both sunlight and Earth in view · ${best.count} candidates</p>`;
+      </button>`).join('') + `<button type="button" class="b-compare">Compare these side by side</button>
+      <p class="b-note">Ranked by time with both sunlight and Earth in view, out of ${best.count} candidates. “Flown” means a mission touched down there; it says nothing about how that mission went.</p>`;
+    body.querySelector('.b-compare')?.addEventListener('click', () => api.compareSites?.([app.site, ...best.spots.map((sp) => sp.r.site)]));
     body.querySelectorAll('.b-row').forEach((b) => b.addEventListener('click', () => {
       const sp = best.spots[Number(b.dataset.i)];
       selectSite(sp.r.site, true);
@@ -236,10 +243,10 @@ export function initExperience(api) {
 
   // ---------- Entry ----------
   window.addEventListener('hashchange', () => {
-    const m = location.hash.replace('#', '');
+    const m = location.hash.slice(1).split('&')[0];
     if ((m === 'pro' || m === 'beginner') && document.body.dataset.mode !== m) setMode(m);
   });
-  const hashMode = location.hash.replace('#', '');
+  const hashMode = location.hash.slice(1).split('&')[0];
   if (hashMode === 'pro' || hashMode === 'beginner') {
     setMode(hashMode);
   } else {
@@ -249,7 +256,19 @@ export function initExperience(api) {
 
   return {
     busy: () => notchBusy(),
-    update: () => { notchUpdate(app.lastNow, { playing: app.playing }); refreshBest(); updateBestLinks(); },
+    update: () => {
+      notchUpdate(app.lastNow, { playing: app.playing });
+      refreshBest();
+      updateBestLinks();
+      // Terrain 3D opens the Cesium view on the same site and date.
+      const t = document.querySelector('[data-x="terrain"]');
+      if (t && app.site) {
+        const q = new URLSearchParams({ from: 'pro', t: new Date(app.windowStartMs).toISOString().slice(0, 16) + 'Z', w: '30' });
+        if (String(app.site.id).startsWith('custom')) q.set('site', `${app.site.lat.toFixed(4)},${app.site.lon.toFixed(4)}`);
+        else q.set('id', app.site.id);
+        t.href = `./planner.html#${q.toString()}`;
+      }
+    },
     proTour, controlsCoach, setMode,
   };
 }

@@ -728,7 +728,11 @@ async function boot() {
   }
   loadPrefs();
   wire();
-  welcome.offer(); // ask about the video tutorial right away, while data loads
+  // Opened from Professional mode ("Terrain 3D"): go straight to the terrain view,
+  // without the welcome dialog or the help buttons Professional already has.
+  const fromPro = new URLSearchParams(location.hash.slice(1)).get('from') === 'pro';
+  if (fromPro) document.body.classList.add('terrain-view');
+  else welcome.offer(); // ask about the video tutorial right away, while data loads
   $('#assessment').innerHTML = '<div class="empty">Loading LOLA terrain…</div>';
   try {
     app.terrain = await loadTerrain(DATA);

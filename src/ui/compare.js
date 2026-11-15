@@ -8,7 +8,7 @@ export const COLUMNS = [
   { key: 'avgPowerW', label: 'Avg power', fmt: (v) => `${v.toFixed(0)} W`, better: 'high', tolRel: 0.05 },
   { key: 'longestDarkH', label: 'Longest dark', fmt: fmtHours, better: 'low', tol: 12, open: 'longestDarkOpenEnded' },
   { key: 'batteryKWh', label: 'Battery', fmt: (v) => `${v.toFixed(1)} kWh`, better: 'low', tolRel: 0.1, tol: 0.2, open: 'batteryOpenEnded' },
-  { key: 'earthVisibleFraction', label: 'Earth visible', fmt: (v) => pct(v, 1), better: 'high', tol: 0.03 },
+  { key: 'earthCentreFraction', label: 'Earth in view', fmt: (v) => pct(v, 1), better: 'high', tol: 0.03 },
   { key: 'dteFraction', label: 'DTE link', fmt: (v) => pct(v, 1), better: 'high', tol: 0.03 },
   { key: 'longestBlackoutH', label: 'Longest blackout', fmt: fmtHours, better: 'low', tol: 12, open: 'longestBlackoutOpenEnded' },
 ];
@@ -35,6 +35,8 @@ export function verdictFor(stats) {
 let scenarioSeq = 0;
 
 export function addScenario(app, site, startMs, label) {
+  const dup = app.scenarios.find((s) => s.site.id === site.id && s.site.lat === site.lat && s.site.lon === site.lon && s.startMs === startMs && s.windowDays === app.windowDays);
+  if (dup) return dup;
   const ctx = prepareSite(site, app.config);
   const sc = scanWindow(ctx, startMs, app.windowDays, app.config);
   const item = { id: `sc-${++scenarioSeq}`, site, startMs, windowDays: app.windowDays, label, scan: sc };
@@ -59,7 +61,7 @@ export function renderCompareTable(container, app, onOpenScenario) {
           <th class="py-2 px-2">Avg Power</th>
           <th class="py-2 px-2">Longest Dark</th>
           <th class="py-2 px-2">Battery Est.</th>
-          <th class="py-2 px-2">Earth Visible</th>
+          <th class="py-2 px-2" title="Earth's centre above the terrain">Earth in view</th>
           <th class="py-2 px-2">DTE Link</th>
           <th class="py-2 px-2">Screening</th>
           <th class="py-2 px-2"></th>
@@ -86,7 +88,7 @@ export function renderCompareTable(container, app, onOpenScenario) {
               <td class="py-2 px-2">${st.avgPowerW.toFixed(0)} W</td>
               <td class="py-2 px-2">${darkGe}${fmtHours(st.longestDarkH)}</td>
               <td class="py-2 px-2">${batGe}${st.batteryKWh.toFixed(1)} kWh</td>
-              <td class="py-2 px-2">${pct(st.earthVisibleFraction, 1)}</td>
+              <td class="py-2 px-2">${pct(st.earthCentreFraction, 1)}</td>
               <td class="py-2 px-2">${pct(st.dteFraction, 1)}</td>
               <td class="py-2 px-2 font-sans"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${v.text}</span></td>
               <td class="py-2 px-2 font-sans"><button type="button" data-rm-sc="${s.id}" class="text-slate-400 hover:text-red-600">✕</button></td>

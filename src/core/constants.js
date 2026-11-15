@@ -23,7 +23,7 @@ export const SITE_GROUPS = {
 };
 
 export const SITE_BADGES = {
-  ridge: { text: '86% Sun · Peak', cls: 'bg-amber-100 text-amber-900 border-amber-300' },
+  ridge: { text: '86% Sun / yr', cls: 'bg-amber-100 text-amber-900 border-amber-300' },
   'peak-shackleton': { text: 'High Massif', cls: 'bg-amber-100 text-amber-900 border-amber-300' },
   'best-0': { text: '#1 LOLA 2027', cls: 'bg-amber-100 text-amber-900 border-amber-300' },
   'best-1': { text: '#2 LOLA 2027', cls: 'bg-amber-100 text-amber-900 border-amber-300' },

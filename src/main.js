@@ -58,7 +58,7 @@ try {
 let globe = null;
 let polar = null;
 let xp = null;
-const xpApi = { app, sites: sitesData, selectSite: (...a) => selectSite(...a), setTime: (...a) => setTime(...a), switchMode: (...a) => switchMode(...a), getGlobe: () => globe, setHint: () => {} };
+const xpApi = { compareSites: (...a) => compareSites(...a), app, sites: sitesData, selectSite: (...a) => selectSite(...a), setTime: (...a) => setTime(...a), switchMode: (...a) => switchMode(...a), getGlobe: () => globe, setHint: () => {} };
 
 export function onLayoutChange() {
   window.dispatchEvent(new Event('resize'));
@@ -122,6 +122,53 @@ export function toggleFocusMode() {
   }
 }
 
+/** Put several sites on the same window side by side in the Compare tab. */
+function compareSites(list) {
+  const seen = new Set();
+  for (const site of list) {
+    if (!site || seen.has(site.id)) continue;
+    seen.add(site.id);
+    addScenario(app, site, app.windowStartMs, site.short || site.name);
+  }
+  showToast('Added to Compare');
+  switchMode('compare');
+}
+
+/** Link that reopens Professional mode on this site and date. */
+export function scenarioLink() {
+  const p = new URLSearchParams();
+  if (app.site.id && !String(app.site.id).startsWith('custom')) p.set('id', app.site.id);
+  else p.set('site', `${app.site.lat.toFixed(4)},${app.site.lon.toFixed(4)}`);
+  p.set('t', new Date(app.windowStartMs).toISOString().slice(0, 16) + 'Z');
+  return `${location.origin}${location.pathname}#pro&${p.toString()}`;
+}
+
+async function copyScenarioLink() {
+  const link = scenarioLink();
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast('Link copied: it reopens this site and date');
+  } catch {
+    showToast(link);
+  }
+}
+
+/** Read #pro&id=…&t=… (or &site=lat,lon) so shared links reopen the same scenario. */
+function readScenarioHash() {
+  const raw = location.hash.slice(1);
+  if (!raw.startsWith('pro&')) return null;
+  const p = new URLSearchParams(raw.slice(4));
+  let site = p.get('id') ? app.sites.find((s) => s.id === p.get('id')) : null;
+  if (!site && p.get('site')) {
+    const [lat, lon] = p.get('site').split(',').map(Number);
+    if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+      site = { id: `custom-${lat.toFixed(2)}`, name: `Custom point ${fmtLatLon(lat, lon, 2)}`, short: 'Custom point', lat, lon, group: 'computed' };
+    }
+  }
+  const t = Date.parse(p.get('t') || '');
+  return { site, t: Number.isFinite(t) ? t : null };
+}
+
 export function selectSite(site, fly = false) {
   if (!site) return;
   app.site = site;
@@ -154,9 +201,7 @@ export function updateCurrentTime(recompute = false) {
       showToast('Added current site & window to Compare Lab');
       switchMode('compare');
     },
-    onCopyLink: () => {
-      showToast(`Scenario saved: ${app.site.name} (${fmtUtc(app.windowStartMs)})`);
-    },
+    onCopyLink: copyScenarioLink,
     onOpenGlossary: (k) => openGlossary(k),
     onCollapseResults: () => toggleResultsPanel(true),
   });
@@ -443,7 +488,7 @@ function boot() {
     e.currentTarget.classList.toggle('border-blue-500', app.learnExplain);
     renderAssessmentPanel(document.getElementById('assessmentRoot'), app, {
       onAddCompare: () => { addScenario(app, app.site, app.windowStartMs, `${app.site.short || app.site.name}`); switchMode('compare'); },
-      onCopyLink: () => { showToast(`Scenario saved: ${app.site.name}`); },
+      onCopyLink: copyScenarioLink,
       onOpenGlossary: openGlossary,
       onCollapseResults: () => toggleResultsPanel(true),
     });
@@ -515,7 +560,7 @@ function boot() {
 
   document.getElementById('cmpSlipBtn')?.addEventListener('click', () => {
     const base = app.windowStartMs;
-    addScenario(app, app.site, base, `${app.site.short || app.site.name} · planned`);
+    addScenario(app, app.site, base, `${app.site.short || app.site.name} · as planned`);
     for (let k = 1; k <= 3; k++) {
       addScenario(app, app.site, Math.round(base + k * SYNODIC_MONTH_DAYS * 86400000), `${app.site.short || app.site.name} · slip +${k} mo`);
     }
@@ -614,9 +659,11 @@ function boot() {
     document.querySelector('[data-mob="view"]')?.click();
     if (!app.ui.timelineCollapsed) toggleTimeline(true);
   }
+  const shared = readScenarioHash(); // read before the experience layer tidies the URL
   xp = initExperience(xpApi);
   window.addEventListener('lsp-theme', () => updateCurrentTime(false));
-  selectSite(app.sites[0], true);
+  if (shared?.t) { app.timeMs = app.windowStartMs = shared.t; }
+  selectSite(shared?.site || app.sites[0], true);
 }
 
 if (document.readyState === 'loading') {
