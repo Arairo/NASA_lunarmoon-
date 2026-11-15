@@ -40,7 +40,7 @@ export function openAbout({ onVideo } = {}) {
             <tr><td>Sun at Reiner Gamma, 2027</td><td>0.002°</td></tr></table></section>
         <section><h3>Honest limits</h3><p>Real terrain covers the south pole (south of about 75°S); elsewhere the horizon is a smooth Moon. The terrain grid is 240 m, so a single ridge-top value can shift by several percentage points. The GO / GO WITH CARE / NO GO lights use our own rules of thumb, not a NASA standard. In the 3D view, Earth is drawn closer and smaller than it really is.</p></section>
         ${team}
-        <section><h3>How we used AI</h3><p>We used Claude Code (Anthropic) as a coding assistant to build and test the interface. The science engine was checked against NASA JPL Horizons, and every data source is listed above.</p></section>
+        <section><h3>How we used AI</h3><p>We used Claude Code (Anthropic) as a coding assistant to write and test the app’s code and text. The narration voice in our videos is AI-generated (Kokoro text-to-speech), and the videos carry an “SI-assisted” label. The science engine was checked against NASA JPL Horizons, and every data source is listed above. No NASA logos or branding are used.</p></section>
         <div class="a-links"><a class="xp-chip" href="${REPO}" target="_blank" rel="noopener">Source code on GitHub</a>
           <button type="button" class="xp-chip" data-v="video">▶ 85-second video tour</button></div>
       </div>
