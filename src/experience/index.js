@@ -9,6 +9,7 @@ import { createSpotlight } from './spotlight.js';
 import { createWalk } from './walk.js';
 import { findBestSpots } from './bestSpots.js';
 import { soundOn, toggleSound } from './sound.js';
+import { openAbout } from './about.js';
 import { prepareSite, evaluate } from '../core/analysis.js';
 
 const store = {
@@ -243,7 +244,7 @@ export function initExperience(api) {
     setMode(hashMode);
   } else {
     document.body.dataset.mode = 'intro';
-    mountIntro({ siteCount: sites.length, onChoose: (m) => setMode(m), onVideo: openVideo });
+    mountIntro({ siteCount: sites.length, onChoose: (m) => setMode(m), onAbout: () => openAbout({ onVideo: openVideo }) });
   }
 
   return {
