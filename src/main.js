@@ -324,6 +324,10 @@ function boot() {
   }
 
   globe = createGlobeRenderer(document.getElementById('globeCanvas'), (pick) => {
+    if (pick.site) {
+      selectSite(pick.site, true);
+      return;
+    }
     const custom = {
       id: `custom-${pick.lat.toFixed(2)}`,
       name: `Custom point ${fmtLatLon(pick.lat, pick.lon, 2)}`,
@@ -334,6 +338,7 @@ function boot() {
     };
     selectSite(custom, false);
   }, { onHint: (t) => xpApi.setHint(t) });
+  globe.setSites(app.sites);
 
   polar = createPolarMapRenderer(document.getElementById('polarCanvas'), (pick) => {
     if (pick.site) return selectSite(pick.site, true);
@@ -357,6 +362,7 @@ function boot() {
   document.getElementById('camPoleBtn')?.addEventListener('click', () => { switchSubView('globe'); globe?.southPole(); });
   document.getElementById('camSiteBtn')?.addEventListener('click', () => { switchSubView('globe'); globe?.flyToSite(app.site); });
   document.getElementById('camWholeBtn')?.addEventListener('click', () => { switchSubView('globe'); globe?.overview(); });
+  document.getElementById('camEarthBtn')?.addEventListener('click', () => { switchSubView('globe'); globe?.viewEarth(); });
   document.getElementById('camSystemBtn')?.addEventListener('click', () => { switchSubView('globe'); globe?.earthMoon(); });
   document.getElementById('camStandSunBtn')?.addEventListener('click', () => {
     switchSubView('globe');

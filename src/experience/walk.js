@@ -57,10 +57,21 @@ const fmtWhen = (ms) => { const iso = new Date(ms).toISOString(); return `${iso.
 
 function skyline(ctx, scan) {
   const s = scan.series;
-  let maxEl = 8;
+  const elList = ctx.horizon?.el180 || ctx.horizon?.elevations || [];
+  let maxHz = -90, minHz = 90;
+  for (let i = 0; i < elList.length; i++) {
+    const v = elList[i];
+    if (v > maxHz) maxHz = v;
+    if (v < minHz) minHz = v;
+  }
+  let maxEl = Math.max(8, maxHz);
   for (let i = 0; i < s.times.length; i++) maxEl = Math.max(maxEl, s.sunEl[i], s.earthEl[i]);
-  const W = 900, H = 300, top = 26, bottom = 250;
-  const yMin = -8, yMax = clamp(Math.ceil(maxEl + 4), 12, 92);
+  let minEl = Math.min(-4, minHz);
+  for (let i = 0; i < s.times.length; i++) minEl = Math.min(minEl, s.sunEl[i], s.earthEl[i]);
+
+  const W = 900, H = 300, top = 36, bottom = 252;
+  const yMin = Math.max(-25, Math.floor(minEl - 3));
+  const yMax = clamp(Math.ceil(maxEl + 5), 14, 92);
   const x = (az) => ((((az % 360) + 360) % 360) / 360) * W;
   const y = (el) => bottom - ((clamp(el, yMin, yMax) - yMin) / (yMax - yMin)) * (bottom - top);
   let ground = `M0 ${H} `, edge = '';
@@ -80,11 +91,14 @@ function skyline(ctx, scan) {
     <rect width="${W}" height="${H}" class="sky"/>
     <line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" class="lvl"/>
     <text x="8" y="${y(0) - 6}" class="lbl">level (0°)</text>
-    ${trails}
+    <g class="trails-under">${trails}</g>
     <circle data-b="sunglow" r="34" fill="url(#wSunGlow)" class="body"/>
     <circle data-b="sun" r="11" fill="#ffb300" class="body"/>
     <circle data-b="earth" r="9" fill="#38bdf8" stroke="#bfe9ff" stroke-width="1.5" class="body"/>
     <path d="${ground}" class="ground"/><path d="${edge}" class="ground-edge"/>
+    <g class="trails-over" opacity="0.6">${trails}</g>
+    <circle data-b="sun-ghost" r="11" fill="rgba(255,179,0,0.2)" stroke="#ffb300" stroke-width="1.8" stroke-dasharray="3 3" class="body"/>
+    <circle data-b="earth-ghost" r="9" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="3 3" class="body"/>
     <text data-b="sunlbl" class="tag">Sun</text><text data-b="earthlbl" class="tag">Earth</text>
     ${compass}
     <text x="${W - 8}" y="18" class="lbl" text-anchor="end">Height stretched to show detail</text>
@@ -93,13 +107,15 @@ function skyline(ctx, scan) {
     const set = (k, attrs) => { const el = root.querySelector(`[data-b="${k}"]`); if (el) for (const a in attrs) el.setAttribute(a, attrs[a]); };
     const sx = x(s.sunAz[i]), sy = y(s.sunEl[i]), ex = x(s.earthAz[i]), ey = y(s.earthEl[i]);
     const sunHidden = s.lit[i] !== 1, earthHidden = s.los[i] !== 1;
-    set('sun', { cx: sx, cy: sy, opacity: sunHidden ? 0.35 : 1 });
+    set('sun', { cx: sx, cy: sy, opacity: sunHidden ? 0 : 1 });
     set('sunglow', { cx: sx, cy: sy, opacity: sunHidden ? 0 : 1 });
-    set('earth', { cx: ex, cy: ey, opacity: earthHidden ? 0.35 : 1 });
-    set('sunlbl', { x: Math.min(W - 70, sx + 14), y: sy - 14 });
-    set('earthlbl', { x: Math.min(W - 70, ex + 12), y: ey - 12 });
-    root.querySelector('[data-b="sunlbl"]').textContent = sunHidden ? 'Sun (hidden)' : 'Sun';
-    root.querySelector('[data-b="earthlbl"]').textContent = earthHidden ? 'Earth (hidden)' : 'Earth';
+    set('earth', { cx: ex, cy: ey, opacity: earthHidden ? 0 : 1 });
+    set('sun-ghost', { cx: sx, cy: sy, opacity: sunHidden ? 0.95 : 0 });
+    set('earth-ghost', { cx: ex, cy: ey, opacity: earthHidden ? 0.95 : 0 });
+    set('sunlbl', { x: Math.min(W - 150, Math.max(10, sx + 14)), y: Math.max(22, Math.min(H - 35, sy - 14)) });
+    set('earthlbl', { x: Math.min(W - 150, Math.max(10, ex + 14)), y: Math.max(22, Math.min(H - 35, ey - 14)) });
+    root.querySelector('[data-b="sunlbl"]').textContent = sunHidden ? 'Sun (hidden behind terrain)' : 'Sun';
+    root.querySelector('[data-b="earthlbl"]').textContent = earthHidden ? 'Earth (hidden behind terrain)' : 'Earth';
   };
   return { svg, place };
 }

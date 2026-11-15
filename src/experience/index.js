@@ -200,14 +200,14 @@ export function initExperience(api) {
   const pctTxt = (f) => `${Math.round(f * 100)}%`;
   function renderBest(state, progress = 0) {
     const body = card.querySelector('.b-body');
-    if (state === 'busy') { body.innerHTML = `<div class="b-busy"><span class="w-spinner" style="width:14px;height:14px;border-width:2px"></span> Searching ${Math.round(progress * 100)}%</div>`; return; }
+    if (state === 'busy') { body.innerHTML = `<div class="b-busy"><span class="w-spinner" style="width:14px;height:14px;border-width:2px"></span> Analyzing realistic sites ${Math.round(progress * 100)}%</div>`; return; }
     body.innerHTML = best.spots.map((sp, i) => `
       <button type="button" class="b-row" data-i="${i}">
         <i style="background:${sp.color}"></i>
-        <span class="b-txt"><b>${sp.title}</b><span>${sp.r.site.short && sp.r.site.searched ? 'LOLA search cell' : sp.r.site.name}</span></span>
-        <span class="b-num" title="Share of the window with the Sun up AND Earth in view">${pctTxt(sp.r.ops)}</span>
+        <span class="b-txt"><b>${sp.title}</b><span>${sp.r.site.name}</span></span>
+        <span class="b-num" title="Solar power and Direct-to-Earth link strength">${Math.round(sp.r.avgPowerW)} W<br><small style="font-size:10px;font-weight:600;opacity:0.85">+${Math.round(sp.r.avgMargin)} dB</small></span>
       </button>`).join('') + `<button type="button" class="b-compare">Compare these side by side</button>
-      <p class="b-note">Ranked by time with both sunlight and Earth in view, out of ${best.count} candidates. “Flown” means a mission touched down there; it says nothing about how that mission went.</p>`;
+      <p class="b-note">Ranked realistically by solar power generation (Watts), Direct-to-Earth link margin & elevation, and terrain accessibility.</p>`;
     body.querySelector('.b-compare')?.addEventListener('click', () => api.compareSites?.([app.site, ...best.spots.map((sp) => sp.r.site)]));
     body.querySelectorAll('.b-row').forEach((b) => b.addEventListener('click', () => {
       const sp = best.spots[Number(b.dataset.i)];
@@ -225,13 +225,14 @@ export function initExperience(api) {
       best.cancel = findBestSpots({
         sites, startMs: app.windowStartMs, config: app.config,
         onProgress: (f) => renderBest('busy', f),
-        onDone: ({ flown, overall, count }) => {
+        onDone: ({ flown, overall, polar, count }) => {
           best.count = count;
           best.spots = [];
-          if (overall) best.spots.push({ r: overall, color: '#30d158', title: 'Best overall' });
-          if (flown && flown.site.id !== overall?.site.id) best.spots.push({ r: flown, color: '#bf5af2', title: 'Best flown site' });
+          if (overall) best.spots.push({ r: overall, color: '#30d158', title: 'Top Solar & Link' });
+          if (flown && flown.site.id !== overall?.site.id) best.spots.push({ r: flown, color: '#bf5af2', title: 'Best Flown Mission' });
+          if (polar && polar.site.id !== overall?.site.id && polar.site.id !== flown?.site.id) best.spots.push({ r: polar, color: '#38bdf8', title: 'Top Polar Science' });
           best.spots.forEach((sp) => { sp.ctx = prepareSite(sp.r.site, null, app.config); });
-          getGlobe()?.setHighlights(best.spots.map((sp) => ({ lat: sp.r.site.lat, lon: sp.r.site.lon, color: sp.color, title: sp.title, sub: `${pctTxt(sp.r.ops)} power + Earth` })));
+          getGlobe()?.setHighlights(best.spots.map((sp) => ({ lat: sp.r.site.lat, lon: sp.r.site.lon, color: sp.color, title: sp.title, sub: `${Math.round(sp.r.avgPowerW)} W · Earth ${sp.r.maxEarthEl.toFixed(0)}°` })));
           renderBest('done');
           updateBestLinks();
         },
