@@ -315,12 +315,12 @@ function boot() {
   document.getElementById('camSystemBtn')?.addEventListener('click', () => { switchSubView('globe'); globe?.earthMoon(); });
   document.getElementById('camStandSunBtn')?.addEventListener('click', () => {
     switchSubView('globe');
-    globe?.flyToSite(app.site);
+    globe?.lookAlong('sun');
     showToast(`Looking toward Sun: Az ${app.lastNow?.sun.az.toFixed(0)}°, El ${app.lastNow?.sun.el.toFixed(1)}°`);
   });
   document.getElementById('camStandEarthBtn')?.addEventListener('click', () => {
     switchSubView('globe');
-    globe?.flyToSite(app.site);
+    globe?.lookAlong('earth');
     showToast(`Looking toward Earth: Az ${app.lastNow?.earth.az.toFixed(0)}°, El ${app.lastNow?.earth.el.toFixed(1)}°`);
   });
   document.getElementById('lightingModeBtn')?.addEventListener('click', (e) => {

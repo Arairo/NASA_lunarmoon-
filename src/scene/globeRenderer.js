@@ -10,6 +10,8 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
   let panX = 0, panY = 0, targetPanX = 0, targetPanY = 0;
   // Orbit centre (normally the Moon's centre; moves toward Earth in the Earth-Moon view).
   const center = [0, 0, 0], targetCenter = [0, 0, 0];
+  // Camera "up": world north normally; the local vertical when standing at a site.
+  const camUp = [0, 1, 0], targetUp = [0, 1, 0];
   // Earth is drawn NOT to scale: 7 Moon radii away (really ~221) and 0.45 Moon radii (really 3.7).
   const EARTH_DIST = 7, EARTH_R = 0.45;
   let highlights = [];
@@ -204,7 +206,10 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     panX += (targetPanX - panX) * 0.25;
     panY += (targetPanY - panY) * 0.25;
     let dc = 0;
-    for (let k = 0; k < 3; k++) { center[k] += (targetCenter[k] - center[k]) * 0.2; dc += Math.abs(targetCenter[k] - center[k]); }
+    for (let k = 0; k < 3; k++) {
+      center[k] += (targetCenter[k] - center[k]) * 0.2; dc += Math.abs(targetCenter[k] - center[k]);
+      camUp[k] += (targetUp[k] - camUp[k]) * 0.2; dc += Math.abs(targetUp[k] - camUp[k]);
+    }
     const settling = dc + Math.abs(targetYaw - yaw) + Math.abs(targetPitch - pitch) + Math.abs(targetDist - distance) + Math.abs(targetPanX - panX) + Math.abs(targetPanY - panY) > 1e-4;
 
     if (three) {
@@ -216,6 +221,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       const cy = distance * Math.sin(pitch);
       const cz = distance * Math.cos(pitch) * Math.cos(yaw);
       three.camera.position.set(cx + center[0], cy + center[1], cz + center[2]);
+      three.camera.up.set(camUp[0], camUp[1], camUp[2]).normalize();
       three.camera.lookAt(center[0], center[1], center[2]);
       if (panX || panY) {
         three.camera.updateMatrixWorld();
@@ -351,7 +357,7 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
     },
     flyToSite(site) {
       if (!site) return;
-      targetCenter.fill(0);
+      targetCenter.fill(0); targetUp[0] = 0; targetUp[1] = 1; targetUp[2] = 0;
       targetPanX = 0; targetPanY = 0;
       selectedSite = site;
       targetYaw = site.lon * DEG;
@@ -360,13 +366,13 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       renderGlobe();
     },
     southPole() {
-      targetCenter.fill(0);
+      targetCenter.fill(0); targetUp[0] = 0; targetUp[1] = 1; targetUp[2] = 0;
       targetPanX = 0; targetPanY = 0;
       targetYaw = 0; targetPitch = -1.48; targetDist = 2.05;
       renderGlobe();
     },
     overview() {
-      targetCenter.fill(0);
+      targetCenter.fill(0); targetUp[0] = 0; targetUp[1] = 1; targetUp[2] = 0;
       targetPanX = 0; targetPanY = 0;
       targetYaw = 0.2; targetPitch = -0.35; targetDist = 3.2;
       renderGlobe();
@@ -376,10 +382,35 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       // Look at the midpoint, from a side view perpendicular to the Earth-Moon line.
       const e = [earthDir[1], earthDir[2], earthDir[0]];
       for (let k = 0; k < 3; k++) targetCenter[k] = e[k] * EARTH_DIST * 0.5;
+      targetUp[0] = 0; targetUp[1] = 1; targetUp[2] = 0;
       let side = [-e[2], 0, e[0]];
       const n = Math.hypot(...side) || 1;
       side = side.map((v) => v / n);
       targetPitch = 0.35; targetYaw = Math.atan2(side[0], side[2]); targetDist = 10.5;
+      renderGlobe();
+    },
+    /** Drop the camera just behind the selected site, looking toward the Sun or Earth. */
+    lookAlong(kind = 'sun') {
+      if (!selectedSite) return;
+      const d = kind === 'earth' ? earthDir : sunDir;
+      const p = latLonToVec3(selectedSite.lat, selectedSite.lon, 1);
+      const up = p;
+      let v = [d[1], d[2], d[0]];
+      const vu = v[0] * up[0] + v[1] * up[1] + v[2] * up[2];
+      v = v.map((x, k) => x - vu * up[k]); // horizontal part of the direction
+      const vn = Math.hypot(...v) || 1;
+      v = v.map((x) => x / vn);
+      let c = v.map((x, k) => -x + 0.42 * up[k]); // camera sits behind the site and a little above
+      const cn = Math.hypot(...c);
+      c = c.map((x) => x / cn);
+      for (let k = 0; k < 3; k++) { targetCenter[k] = p[k] + v[k] * 0.1; targetUp[k] = up[k]; }
+      targetPanX = 0; targetPanY = 0;
+      targetPitch = Math.asin(clamp(c[1], -1, 1));
+      targetYaw = Math.atan2(c[0], c[2]);
+      targetDist = 0.32;
+      // Keep the shortest way round so the camera does not spin a full turn.
+      while (targetYaw - yaw > Math.PI) targetYaw -= 2 * Math.PI;
+      while (targetYaw - yaw < -Math.PI) targetYaw += 2 * Math.PI;
       renderGlobe();
     },
     setHighlights,
@@ -388,12 +419,12 @@ export function createGlobeRenderer(canvas, onPickSite, options = {}) {
       renderGlobe();
     },
     reset() {
-      targetCenter.fill(0);
+      targetCenter.fill(0); targetUp[0] = 0; targetUp[1] = 1; targetUp[2] = 0;
       targetYaw = -0.45; targetPitch = -1.15; targetDist = 3.1; targetPanX = 0; targetPanY = 0;
       renderGlobe();
     },
     view(name) {
-      targetCenter.fill(0);
+      targetCenter.fill(0); targetUp[0] = 0; targetUp[1] = 1; targetUp[2] = 0;
       targetPanX = 0; targetPanY = 0;
       const v = { front: [0, 0, 3], back: [Math.PI, 0, 3], left: [-Math.PI / 2, 0, 3], right: [Math.PI / 2, 0, 3], top: [0, 1.53, 3], bottom: [0, -1.53, 3] }[name];
       if (v) [targetYaw, targetPitch, targetDist] = v;
