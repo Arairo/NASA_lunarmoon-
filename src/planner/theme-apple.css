@@ -1,0 +1,76 @@
+/* Apple-style re-skin of the Cesium planner so it matches the main app:
+   system type, rounder shapes, glass header, and a dark theme (default) with
+   a light alternative. Everything is driven by the existing design tokens. */
+
+html[data-theme] {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --radius: 10px;
+  --dur: 200ms;
+}
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #05070c;
+  --surface: #12161f;
+  --surface-2: #1b2130;
+  --surface-3: #262d3d;
+  --ink: #f5f5f7;
+  --ink-2: #c7c9d1;
+  --ink-3: #8e93a0;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --control-border: rgba(255, 255, 255, 0.28);
+  --action: #2997ff;
+  --action-ink: #ffffff;
+  --action-soft: rgba(41, 151, 255, 0.16);
+  --focus: #2997ff;
+  --sun: #ffb300;
+  --sun-soft: rgba(255, 179, 0, 0.18);
+  --earth: #38bdf8;
+  --earth-soft: rgba(56, 189, 248, 0.18);
+  --terrain: #8e93a0;
+  --terrain-soft: #3a4152;
+  --power: #30d158;
+  --ok: #30d158;
+  --ok-bg: rgba(48, 209, 88, 0.14);
+  --warn: #ffd60a;
+  --warn-bg: rgba(255, 214, 10, 0.13);
+  --bad: #ff6b61;
+  --bad-bg: rgba(255, 69, 58, 0.14);
+}
+html[data-theme='light'] {
+  color-scheme: light;
+  --paper: #f5f5f7;
+  --surface: #ffffff;
+  --surface-2: #f2f2f5;
+  --surface-3: #e6e6eb;
+  --ink: #1d1d1f;
+  --ink-2: #424245;
+  --ink-3: #6e6e73;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.16);
+  --action: #0071e3;
+  --action-soft: rgba(0, 113, 227, 0.1);
+  --focus: #0071e3;
+}
+
+html[data-theme] body { -webkit-font-smoothing: antialiased; }
+html[data-theme] header,
+html[data-theme] .topbar {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+}
+html[data-theme] button,
+html[data-theme] a.mode-link,
+html[data-theme] input,
+html[data-theme] select { border-radius: 999px; }
+html[data-theme] input,
+html[data-theme] select { border-radius: 10px; }
+html[data-theme] button { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background var(--dur), border-color var(--dur); }
+html[data-theme] button:active { transform: scale(0.96); }
+html[data-theme] button.primary { background: var(--ink); color: var(--paper); }
+html[data-theme='dark'] button.primary:hover { background: #ffffff; }
+html[data-theme='dark'] .video-btn { background: #ffb300; border-color: #ffb300; color: #000; }
+html[data-theme] .seg { border-radius: 999px; overflow: hidden; }
+html[data-theme] .seg button { border-radius: 0; }
+.theme-toggle { min-width: 34px; padding: 6px 10px; }

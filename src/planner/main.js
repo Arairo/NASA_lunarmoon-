@@ -4,6 +4,7 @@ import '@fontsource/ibm-plex-sans/600.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import './styles.css';
+import './theme-apple.css';
 import { createMoonScene } from './scene/moonScene.js';
 import { loadTerrain } from '../core/horizon.js';
 import { DEFAULT_CONFIG, evaluate, isEarthUp, isSunUp, nextTransition, prepareSite, scan } from '../core/analysis.js';
@@ -22,6 +23,10 @@ import { createTour } from './ui/tour.js';
 import { createVideoTutorial } from './ui/videoTutorial.js';
 import { createWelcome } from './ui/welcome.js';
 import { findBestSpots } from '../experience/bestSpots.js';
+
+// Shared light/dark theme with the main app (dark by default).
+const savedTheme = (() => { try { return localStorage.getItem('lsp.theme'); } catch { return null; } })();
+document.documentElement.dataset.theme = savedTheme || 'dark';
 
 const DATA = `${import.meta.env.BASE_URL}data`;
 const $ = (sel) => document.querySelector(sel);
@@ -640,6 +645,14 @@ function wire() {
   );
   $('#overlayScale .scale-bar').style.background = RAMP_CSS;
   $('#viewSystem').addEventListener('click', () => app.scene?.earthMoonView());
+  $('#themeBtn')?.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('lsp.theme', next); } catch {}
+    $('#themeBtn').textContent = next === 'dark' ? '☀︎' : '☾';
+    recomputeWindow(); // canvases read the colour tokens when they draw
+  });
+  $('#themeBtn') && ($('#themeBtn').textContent = document.documentElement.dataset.theme === 'dark' ? '☀︎' : '☾');
   {
     const steps = [1, 3, 6];
     let k = 0;
